@@ -1,6 +1,6 @@
 # Franco Colapinto · Horarios 2026
 
-Página web con los horarios **en hora argentina (GMT−3)** de cada Gran Premio que le queda a Franco Colapinto en la temporada 2026 de Fórmula 1.
+Página web con los horarios **en hora argentina (GMT−3)** de cada Gran Premio de Franco Colapinto en la temporada 2026 de Fórmula 1, y los resultados de las fechas ya disputadas.
 
 - Al entrar se muestra automáticamente la **próxima carrera**.
 - Con las flechas (o deslizando en el celular, o con ← → del teclado) se navega al resto de los GP.

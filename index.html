@@ -200,7 +200,28 @@
 <script>
 // Horarios en hora de Argentina (GMT-3). "end" = fin aproximado de la carrera:
 // a partir de ese momento la página pasa a mostrar el siguiente GP.
+const PAST = (id, round, gp, track, dates, raceDay, sprint) =>
+  ({ id, round, gp, track, dates, end: raceDay + 'T20:00:00-03:00', sprint: !!sprint, past: true });
+
 const RACES = [
+  // Fechas ya disputadas: solo resultados.
+  PAST('australia', 1, 'GP de Australia', 'Albert Park', '6 — 8 MAR 2026', '2026-03-08'),
+  PAST('china', 2, 'GP de China', 'Shanghái', '13 — 15 MAR 2026', '2026-03-15', true),
+  PAST('japon', 3, 'GP de Japón', 'Suzuka', '27 — 29 MAR 2026', '2026-03-29'),
+  PAST('miami', 4, 'GP de Miami', 'Miami', '1 — 3 MAY 2026', '2026-05-03', true),
+  PAST('canada', 5, 'GP de Canadá', 'Gilles Villeneuve', '22 — 24 MAY 2026', '2026-05-24', true),
+  PAST('monaco', 6, 'GP de Mónaco', 'Montecarlo', '5 — 7 JUN 2026', '2026-06-07'),
+  PAST('barcelona', 7, 'GP de Barcelona', 'Montmeló', '12 — 14 JUN 2026', '2026-06-14'),
+  PAST('austria', 8, 'GP de Austria', 'Spielberg', '26 — 28 JUN 2026', '2026-06-28'),
+  PAST('gran-bretana', 9, 'GP de Gran Bretaña', 'Silverstone', '3 — 5 JUL 2026', '2026-07-05', true),
+  PAST('belgica', 10, 'GP de Bélgica', 'Spa-Francorchamps', '17 — 19 JUL 2026', '2026-07-19'),
+  PAST('hungria', 11, 'GP de Hungría', 'Hungaroring', '24 — 26 JUL 2026', '2026-07-26'),
+  PAST('paises-bajos', 12, 'GP de Países Bajos', 'Zandvoort', '21 — 23 AGO 2026', '2026-08-23', true),
+  PAST('italia', 13, 'GP de Italia', 'Monza', '4 — 6 SEP 2026', '2026-09-06'),
+  PAST('espana', 14, 'GP de España', 'Madrid', '11 — 13 SEP 2026', '2026-09-13'),
+  PAST('azerbaiyan', 15, 'GP de Azerbaiyán', 'Bakú', '24 — 26 SEP 2026', '2026-09-26'),
+  PAST('bahrein', 16, 'GP de Bahréin', 'Sepang, Malasia', '2 — 4 OCT 2026', '2026-10-04'),
+
   { id: 'singapur', round: 17, gp: 'GP de Singapur', track: 'Marina Bay', dates: '9 — 11 OCT 2026',
     sub: 'Fin de semana sprint', end: '2026-10-11T11:30:00-03:00',
     days: [
@@ -351,7 +372,7 @@ function status(i) {
 
 RACES.forEach((r) => {
   r.raceDay = r.end.slice(0, 10);
-  r.sprint = r.days.some((d) => d.s.some(([n]) => /sprint/i.test(n)));
+  if (r.days) r.sprint = r.days.some((d) => d.s.some(([n]) => /sprint/i.test(n)));
 });
 const finished = (r) => Date.parse(r.end) <= now;
 let view = 'results';   // en los GP terminados: 'results' o 'schedule'
@@ -393,8 +414,8 @@ function show(i, push) {
   idx = Math.max(0, Math.min(RACES.length - 1, i));
   const r = RACES[idx];
   const done = finished(r);
-  $('seg').classList.toggle('on', done);
-  if (done && view === 'results') renderResults(r);
+  $('seg').classList.toggle('on', done && !!r.days);
+  if (done && (view === 'results' || !r.days)) renderResults(r);
   else { token++; renderSchedule(r); }
   $('whereGp').textContent = r.gp;
   $('whereMeta').innerHTML = `FECHA ${r.round} DE 23 · ${status(idx).toUpperCase()}`;
