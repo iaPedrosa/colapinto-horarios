@@ -224,7 +224,7 @@
   // ---------- tabla del campeonato ----------
   // Se guarda una hora en el navegador: cambia solo después de cada carrera.
   async function loadStandings() {
-    const KEY = 'standings';
+    const KEY = 'standings2';
     try {
       const c = cacheGet(KEY);
       if (c && Date.now() - c.at < 3600000) return c.data;
@@ -242,6 +242,7 @@
         pos: x.positionText || x.position, pts: Number(x.points), wins: Number(x.wins || 0),
         name: `${x.Driver.givenName || ''} ${x.Driver.familyName || ''}`.trim(),
         last: x.Driver.familyName || '',
+        id: x.Driver.driverId,
         team: teamName((x.Constructors && x.Constructors.length ? x.Constructors[x.Constructors.length - 1].name : '')),
         me: isFranco(x.Driver)
       })) : [],
@@ -277,5 +278,143 @@
     </div>`;
   }
 
-  window.Results = { load, render, loadStandings, renderStandings };
+  // ---------- temporada de Franco + duelo con su compañero ----------
+  const num = (t) => (/^\d+$/.test(String(t)) ? Number(t) : null);
+
+  async function driverSeason(id) {
+    const [res, qual, spr] = await Promise.all([
+      getJSON(`${JOLPICA}/2026/drivers/${id}/results.json?limit=100`),
+      getJSON(`${JOLPICA}/2026/drivers/${id}/qualifying.json?limit=100`),
+      getJSON(`${JOLPICA}/2026/drivers/${id}/sprint.json?limit=100`).catch(() => null)
+    ]);
+    const races = {};
+    for (const r of res.MRData.RaceTable.Races || []) {
+      const x = r.Results && r.Results[0];
+      if (!x) continue;
+      races[r.round] = { round: Number(r.round), date: r.date, posText: x.positionText, pos: num(x.positionText),
+        order: Number(x.position), points: Number(x.points) || 0, status: x.status };
+    }
+    const quali = {};
+    for (const r of (qual.MRData.RaceTable.Races || [])) {
+      const x = r.QualifyingResults && r.QualifyingResults[0];
+      if (x) quali[r.round] = Number(x.position);
+    }
+    const sprint = {};
+    for (const r of ((spr && spr.MRData.RaceTable.Races) || [])) {
+      const x = r.SprintResults && r.SprintResults[0];
+      if (x) sprint[r.round] = Number(x.points) || 0;
+    }
+    return { races, quali, sprint };
+  }
+
+  async function loadSeason() {
+    const KEY = 'season1';
+    const c = cacheGet(KEY);
+    if (c && Date.now() - c.at < 3600000) return c.data;
+    const st = await loadStandings();
+    if (!st) return null;
+    const me = st.drivers.find((d) => d.me);
+    const mate = st.drivers.find((d) => !d.me && /alpine/i.test(d.team));
+    const meId = (me && me.id) || 'colapinto';
+    const mateId = (mate && mate.id) || 'gasly';
+    const [a, b] = await Promise.all([driverSeason(meId), driverSeason(mateId)]);
+    const data = { round: st.round, me: me || { last: 'Colapinto' }, mate: mate || { last: 'Gasly' }, a, b };
+    cacheSet(KEY, { at: Date.now(), data });
+    return data;
+  }
+
+  function cumulative(d) {
+    const rounds = [...new Set([...Object.keys(d.races), ...Object.keys(d.sprint)].map(Number))].sort((x, y) => x - y);
+    let acc = 0;
+    return rounds.map((r) => { acc += (d.races[r] ? d.races[r].points : 0) + (d.sprint[r] || 0); return { round: r, pts: acc }; });
+  }
+
+  function pointsChart(ca, cb, W, nameA, nameB) {
+    const rounds = [...new Set([...ca, ...cb].map((p) => p.round))].sort((x, y) => x - y);
+    if (rounds.length < 2) return '';
+    const H = W < 800 ? 230 : 190, padL = 50, padR = 70, padT = 14, padB = 30;
+    const maxV = Math.max(10, ...ca.map((p) => p.pts), ...cb.map((p) => p.pts));
+    const step = maxV > 100 ? 50 : maxV > 40 ? 20 : 10;
+    const top = Math.ceil(maxV / step) * step;
+    const x = (r) => padL + ((rounds.indexOf(r)) / (rounds.length - 1)) * (W - padL - padR);
+    const y = (v) => padT + (1 - v / top) * (H - padT - padB);
+    const line = (arr, col, w) => {
+      if (!arr.length) return '';
+      const pts = arr.map((p) => `${x(p.round).toFixed(1)},${y(p.pts).toFixed(1)}`).join(' ');
+      const last = arr[arr.length - 1];
+      return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${x(last.round)}" cy="${y(last.pts)}" r="7" fill="${col}"/>
+        <text x="${x(last.round) + 12}" y="${y(last.pts) + 7}" fill="${col}" font-size="22" font-weight="800">${last.pts}</text>`;
+    };
+    const grid = [];
+    for (let v = 0; v <= top; v += step) {
+      grid.push(`<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" stroke="#163A66" stroke-width="1.5"/>
+        <text x="${padL - 10}" y="${y(v) + 7}" text-anchor="end" fill="#74ACDF" font-size="18" font-weight="700">${v}</text>`);
+    }
+    return `
+      <div class="r-label">PUNTOS ACUMULADOS ·
+        <span style="color:#FF87BC">${esc(nameA.toUpperCase())}</span> VS <span style="color:#74ACDF">${esc(nameB.toUpperCase())}</span></div>
+      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">
+        ${grid.join('')}
+        <text x="${padL}" y="${H - 4}" fill="#74ACDF" font-size="18" font-weight="700">FECHA ${rounds[0]}</text>
+        <text x="${W - padR}" y="${H - 4}" text-anchor="end" fill="#74ACDF" font-size="18" font-weight="700">FECHA ${rounds[rounds.length - 1]}</text>
+        ${line(cb, '#74ACDF', 4)}
+        ${line(ca, '#FF87BC', 5)}
+      </svg>`;
+  }
+
+  function renderSeason(d, opts) {
+    const W = (opts && opts.width) || 920;
+    const A = Object.values(d.a.races), B = d.b.races;
+    const classified = A.filter((r) => r.pos != null);
+    const best = classified.length ? classified.reduce((m, r) => (r.pos < m.pos ? r : m)) : null;
+    const avg = classified.length ? classified.reduce((s2, r) => s2 + r.pos, 0) / classified.length : null;
+    const inPts = A.filter((r) => r.points > 0).length;
+    const dnf = A.filter((r) => r.pos == null).length;
+    const ca = cumulative(d.a), cb = cumulative(d.b);
+    const ptsA = d.me.pts != null ? d.me.pts : (ca.length ? ca[ca.length - 1].pts : 0);
+    const ptsB = d.mate.pts != null ? d.mate.pts : (cb.length ? cb[cb.length - 1].pts : 0);
+
+    const tiles = [
+      ['PUNTOS', String(ptsA)],
+      ['CAMPEONATO', d.me.pos ? 'P' + d.me.pos : '—'],
+      ['MEJOR RESULTADO', best ? 'P' + best.pos : '—'],
+      ['PROMEDIO', avg ? 'P' + avg.toFixed(1).replace('.', ',') : '—'],
+      ['EN LOS PUNTOS', `${inPts}/${A.length}`],
+      ['ABANDONOS', String(dnf)]
+    ];
+
+    // Duelo con el compañero: solo fechas en las que corrieron los dos.
+    let qa = 0, qb = 0, ra = 0, rb = 0;
+    for (const k of Object.keys(d.a.quali)) if (d.b.quali[k] != null) (d.a.quali[k] < d.b.quali[k] ? qa++ : qb++);
+    for (const k of Object.keys(d.a.races)) if (B[k]) (d.a.races[k].order < B[k].order ? ra++ : rb++);
+    const bestB = Object.values(B).filter((r) => r.pos != null).reduce((m, r) => (!m || r.pos < m.pos ? r : m), null);
+    const duel = [
+      ['CLASIFICACIÓN', qa, qb, true],
+      ['CARRERA', ra, rb, true],
+      ['PUNTOS', ptsA, ptsB, true],
+      ['MEJOR RESULTADO', best ? 'P' + best.pos : '—', bestB ? 'P' + bestB.pos : '—', false]
+    ].map(([k, va, vb, bar]) => {
+      const tot = (Number(va) || 0) + (Number(vb) || 0);
+      const pa = bar && tot ? (Number(va) / tot) * 100 : 50;
+      return `<div class="du-row">
+        <div class="du-vals"><b class="du-a">${esc(va)}</b><span>${k}</span><b class="du-b">${esc(vb)}</b></div>
+        ${bar ? `<div class="du-bar"><i style="width:${pa.toFixed(1)}%"></i></div>` : ''}
+      </div>`;
+    }).join('');
+
+    const chips = A.sort((x, y) => x.round - y.round).map((r) => `
+      <div class="sz-chip${r.points > 0 ? ' pts' : ''}${r.pos == null ? ' out' : ''}">
+        <span>F${r.round}</span><b>${r.pos != null ? 'P' + r.pos : 'DNF'}</b></div>`).join('');
+
+    return `
+      <div class="r-tiles sz-tiles">${tiles.map(([k, v]) => `<div class="r-tile"><div>${k}</div><b>${esc(v)}</b></div>`).join('')}</div>
+      ${pointsChart(ca, cb, W, d.me.last || 'Colapinto', d.mate.last || 'Gasly')}
+      <div class="r-label">DUELO EN ALPINE · <span style="color:#FF87BC">${esc((d.me.last || 'Colapinto').toUpperCase())}</span> VS <span style="color:#74ACDF">${esc((d.mate.last || 'Gasly').toUpperCase())}</span></div>
+      <div class="du">${duel}</div>
+      <div class="r-label">CARRERA A CARRERA</div>
+      <div class="sz-chips">${chips}</div>`;
+  }
+
+  window.Results = { load, render, loadStandings, renderStandings, loadSeason, renderSeason };
 })();

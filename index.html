@@ -200,6 +200,51 @@
   .poster.m .r-msg span { font-size: 34px; }
   .poster.m .r-src { right: 40px; bottom: 16px; }
 
+  /* ---------- temporada ---------- */
+  .sz-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); --tile-cols: 3; }
+  .poster.m .sz-tiles { --tile-cols: 2; }
+  .du { display: flex; flex-direction: column; gap: 12px; }
+  .du-row { background: var(--card); padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .du-vals { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .du-vals span { font-weight: 700; font-size: 20px; letter-spacing: .16em; color: var(--celeste); text-align: center; }
+  .du-vals b { font-weight: 900; font-size: 40px; line-height: 1; min-width: 90px; }
+  .du-a { color: var(--pink); }
+  .du-b { color: var(--celeste); text-align: right; }
+  .du-bar { height: 8px; background: var(--celeste); }
+  .du-bar i { display: block; height: 100%; background: var(--pink); }
+  .sz-chips { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .poster.m .sz-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sz-chip { background: var(--card); padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .sz-chip span { font-weight: 700; font-size: 16px; letter-spacing: .12em; color: var(--celeste); }
+  .sz-chip b { font-weight: 900; font-size: 30px; }
+  .sz-chip.pts { background: var(--pink); color: var(--navy); }
+  .sz-chip.pts span { color: var(--navy); }
+  .sz-chip.out b { color: #6F8BB0; }
+  .poster.m .du-vals b { font-size: 46px; }
+  .poster.m .du-vals span { font-size: 20px; }
+  .poster.m .sz-chip b { font-size: 34px; }
+
+  /* ---------- cuenta regresiva ---------- */
+  .cd {
+    margin-top: 30px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: var(--card-2); padding: 16px 26px;
+  }
+  .cd-label { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 24px; letter-spacing: .14em; color: var(--celeste); min-width: 0; }
+  .cd-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--pink); flex-shrink: 0; }
+  .cd-time { font-weight: 900; font-size: 52px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cd.live { background: var(--pink); color: var(--navy); }
+  .cd.live .cd-label { color: var(--navy); }
+  .cd.live .cd-dot { background: var(--navy); animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  @media (prefers-reduced-motion: reduce) { .cd.live .cd-dot { animation: none; } }
+  .days.with-cd { margin-top: 22px; }
+  .session.done { opacity: .4; }
+  .session.next .s-time { color: var(--pink); }
+  .session.live { background: var(--pink); color: var(--navy); }
+  .poster.m .cd { flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 22px; }
+  .poster.m .cd-label { font-size: 24px; }
+  .poster.m .cd-time { font-size: 64px; }
+
   /* ---------- tabla del campeonato ---------- */
   .st-cols { margin-top: 30px; display: grid; gap: 34px; grid-template-columns: minmax(0, 1fr); }
   .st-cols.two { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; }
@@ -227,6 +272,7 @@
   .content.st .name { white-space: nowrap; }
 
   @media (max-width: 480px) {
+    .seg button { padding: 0 10px; font-size: 14px; letter-spacing: .06em; }
     .where-gp { font-size: 18px; }
     .where-meta { font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
   }
@@ -245,6 +291,7 @@
     <button type="button" id="segRes" aria-pressed="true">RESULTADOS</button>
     <button type="button" id="segSch" aria-pressed="false">HORARIOS</button>
     <button type="button" id="segTab" aria-pressed="false">TABLA</button>
+    <button type="button" id="segSea" aria-pressed="false">TEMPORADA</button>
   </div>
   <div class="ctrls">
   <button id="prev" type="button" aria-label="Gran Premio anterior">
@@ -347,7 +394,7 @@ function posterHTML(r) {
     <div class="day">
       <div class="day-badge"><div class="dow">${d.dow}</div><div class="dnum">${d.day}</div></div>
       <div class="sessions">${d.s.map(([n, t]) => `
-        <div class="session"><div class="s-name">${esc(n)}</div><div class="s-time">${t}</div></div>`).join('')}
+        <div class="session${rowState(r, n, t, d.day)}"><div class="s-name">${esc(n)}</div><div class="s-time">${t}</div></div>`).join('')}
       </div>
     </div>`).join('');
   return `
@@ -360,7 +407,8 @@ function posterHTML(r) {
         <div class="gp-dates">${r.dates}</div>
       </div>
       <div class="sub">${clock} HORARIOS DE ARGENTINA (GMT−3) · ${esc(r.sub.toUpperCase())}</div>
-      <div class="days${r.compact ? ' compact' : ''}">
+      ${countdownHTML(r)}
+      <div class="days${r.compact ? ' compact' : ''}${nextSession(r) ? ' with-cd' : ''}">
         ${days}
         <div class="race">
           <div class="day-badge"><div class="dow">${r.race.dow}</div><div class="dnum">${r.race.day}</div></div>
@@ -372,6 +420,63 @@ function posterHTML(r) {
       </div>
     </div>
     ${FOOTER}`;
+}
+
+// ---------- cuenta regresiva ----------
+const DUR = (name) => /^carrera$/i.test(name) ? 2 * 3600000 : 3600000;
+function sessionISO(r, dayNum, time) {
+  const [Y, M, D] = r.raceDay.split('-').map(Number);
+  for (let k = 0; k < 5; k++) {
+    const dt = new Date(Date.UTC(Y, M - 1, D - k));
+    if (dt.getUTCDate() === Number(dayNum)) {
+      const ymd = dt.toISOString().slice(0, 10);
+      return Date.parse(`${ymd}T${time}:00-03:00`);
+    }
+  }
+  return null;
+}
+function sessionsOf(r) {
+  if (!r.days) return [];
+  if (!r._sessions) {
+    r._sessions = [
+      ...r.days.flatMap((d) => d.s.map(([n, t]) => ({ name: n, at: sessionISO(r, d.day, t), key: n + t + d.day }))),
+      { name: 'Carrera', at: sessionISO(r, r.race.day, r.race.time), key: 'race' }
+    ];
+  }
+  return r._sessions;
+}
+// La sesión en curso o la próxima de este GP (null si ya terminó todo).
+function nextSession(r, t = Date.now()) {
+  for (const s of sessionsOf(r)) {
+    if (s.at == null) continue;
+    if (t < s.at) return { ...s, live: false };
+    if (t < s.at + DUR(s.name)) return { ...s, live: true };
+  }
+  return null;
+}
+function rowState(r, n, t, day) {
+  const at = sessionISO(r, day, t);
+  if (at == null) return '';
+  const now2 = Date.now();
+  if (now2 >= at + DUR(n)) return ' done';
+  const nx = nextSession(r);
+  if (nx && nx.at === at && nx.name === n) return nx.live ? ' live' : ' next';
+  return '';
+}
+function fmtLeft(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  const p = (x) => String(x).padStart(2, '0');
+  if (d >= 1) return `${d} ${d === 1 ? 'DÍA' : 'DÍAS'} ${p(h)}:${p(m)}:${p(sec)}`;
+  return `${p(h)}:${p(m)}:${p(sec)}`;
+}
+function countdownHTML(r) {
+  const nx = nextSession(r);
+  if (!nx) return '';
+  return `<div class="cd${nx.live ? ' live' : ''}" data-key="${esc(nx.key)}${nx.live ? '-live' : ''}">
+    <div class="cd-label"><span class="cd-dot"></span>${nx.live ? 'EN VIVO' : 'PRÓXIMA'} · ${esc(nx.name.toUpperCase())}</div>
+    <div class="cd-time" id="cdTime">${nx.live ? 'AHORA' : fmtLeft(nx.at - Date.now())}</div>
+  </div>`;
 }
 
 const FOOTER = '<div class="footer"><div class="vamos">VAMOS FRANCO</div><div class="sign">ARGENTINA · #43</div></div>';
@@ -426,7 +531,9 @@ let posterW = 1080, baseH = 1350, scale = 1;
 // Si el contenido no entra en la placa, la placa crece hacia abajo y se puede scrollear.
 function relayout() {
   const c = poster.querySelector('.content');
-  const need = c ? Math.ceil(c.offsetTop + c.offsetHeight + (mobile ? 150 : 170)) : 0;
+  // Con las líneas decorativas (placa de horarios) hace falta más aire abajo.
+  const extra = poster.querySelector('.lines') ? (mobile ? 300 : 300) : (mobile ? 150 : 170);
+  const need = c ? Math.ceil(c.offsetTop + c.offsetHeight + extra) : 0;
   const H = Math.max(baseH, need);
   poster.style.height = H + 'px';
   frame.style.height = H * scale + 'px';
@@ -477,6 +584,27 @@ function setView(v) {
 $('segRes').addEventListener('click', () => setView('gp'));
 $('segSch').addEventListener('click', () => setView('schedule'));
 $('segTab').addEventListener('click', () => setView('standings'));
+$('segSea').addEventListener('click', () => setView('season'));
+
+function renderSeason() {
+  const my = ++token;
+  poster.setAttribute('aria-label', 'Temporada 2026 de Franco Colapinto y duelo con su compañero de equipo.');
+  const head = (round) => `
+    <div class="kicker">FÓRMULA 1 · TEMPORADA 2026${round ? ' · TRAS LA FECHA ' + round : ''}</div>
+    <div class="name">Franco Colapinto</div>
+    <div class="gp-row"><div class="gp-tag">SU TEMPORADA</div></div>`;
+  const shell = (inner, src) => `${backdrop(false)}<div class="content res">${inner}</div>
+    ${src ? '<div class="r-src">DATOS: JOLPICA-F1</div>' : ''}${FOOTER}`;
+  paint(shell(`${head()}<div class="r-msg"><b>Cargando<br>temporada…</b></div>`));
+  window.Results.loadSeason().then((d) => {
+    if (my !== token) return;
+    if (!d) { paint(shell(`${head()}<div class="r-msg"><b>Datos no<br>disponibles</b><span>Probá de nuevo en un rato.</span></div>`)); return; }
+    paint(shell(head(d.round) + window.Results.renderSeason(d, { width: posterW - (mobile ? 80 : 160) }), true));
+  }).catch(() => {
+    if (my !== token) return;
+    paint(shell(`${head()}<div class="r-msg"><b>Sin conexión<br>con los datos</b><span>Probá de nuevo en un rato.</span></div>`));
+  });
+}
 
 function standingsHead(round) {
   return `
@@ -530,13 +658,15 @@ function show(i, push) {
   const r = RACES[idx];
   const done = finished(r);
   if (view === 'schedule' && !r.days) view = 'gp';
-  const mode = view === 'standings' ? 'standings' : (done && view === 'gp') ? 'results' : 'schedule';
+  const mode = (view === 'standings' || view === 'season') ? view : (done && view === 'gp') ? 'results' : 'schedule';
   $('segRes').hidden = !done;
   $('segSch').hidden = !r.days;
   $('segRes').setAttribute('aria-pressed', String(mode === 'results'));
   $('segSch').setAttribute('aria-pressed', String(mode === 'schedule'));
   $('segTab').setAttribute('aria-pressed', String(mode === 'standings'));
+  $('segSea').setAttribute('aria-pressed', String(mode === 'season'));
   if (mode === 'standings') renderStandings();
+  else if (mode === 'season') renderSeason();
   else if (mode === 'results') renderResults(r);
   else { token++; renderSchedule(r); }
   $('whereGp').textContent = r.gp;
@@ -547,7 +677,7 @@ function show(i, push) {
   if (push) history.replaceState(null, '', '#' + r.id);
 }
 
-function go(i) { if (view === 'standings') view = 'gp'; show(i, true); }
+function go(i) { if (view === 'standings' || view === 'season') view = 'gp'; show(i, true); }
 $('prev').addEventListener('click', () => go(idx - 1));
 $('next').addEventListener('click', () => go(idx + 1));
 document.addEventListener('keydown', (e) => {
@@ -588,6 +718,15 @@ const fromHash = RACES.findIndex((r) => '#' + r.id === location.hash);
 fit();
 show(fromHash === -1 ? upcomingIdx : fromHash, false);
 window.addEventListener('resize', fit);
+setInterval(() => {
+  const el = poster.querySelector('.cd');
+  if (!el) return;
+  const r = RACES[idx];
+  const nx = nextSession(r);
+  const key = nx ? nx.key + (nx.live ? '-live' : '') : '';
+  if (key !== el.getAttribute('data-key')) { const y = stage.scrollTop; renderSchedule(r); stage.scrollTop = y; return; }
+  if (!nx.live) $('cdTime').textContent = fmtLeft(nx.at - Date.now());
+}, 1000);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
 </script>
 </body>

@@ -19,6 +19,12 @@ Los datos vienen de dos APIs gratuitas que no piden cuenta ni clave, consultadas
 
 Los resultados suelen aparecer unas horas después de la carrera. Una vez completos, quedan guardados en el navegador.
 
+## Más vistas
+
+- **Cuenta regresiva**: en la placa de horarios, cuánto falta para la próxima sesión (o "EN VIVO" mientras se corre). Las sesiones ya hechas se ven atenuadas.
+- **Tabla**: campeonato de pilotos y de constructores.
+- **Temporada**: el año de Franco (puntos, mejor resultado, promedio, abandonos, resultado de cada fecha) y el duelo con su compañero de Alpine en clasificación, carrera y puntos.
+
 ## Publicarla con GitHub Pages
 
 1. En el repo, entrá a **Settings → Pages**.
