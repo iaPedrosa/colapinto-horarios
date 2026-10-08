@@ -37,11 +37,10 @@ que descarga los datos y los guarda en `data/`:
 La página lee primero esos archivos. Si falta alguno o quedó desactualizado (por ejemplo, justo
 después de una carrera), consulta la API directamente.
 
-## Publicarla con GitHub Pages
+## Publicación
 
-1. En el repo, entrá a **Settings → Pages**.
-2. En *Build and deployment → Source* elegí **GitHub Actions**.
-3. Listo: el workflow publica la página en cada cambio. En un par de minutos la página queda en `https://<tu-usuario>.github.io/<nombre-del-repo>/`.
+La página está publicada en Vercel, conectado a este repo: cada commit a `main` (incluidos los
+de datos que hace el workflow) se publica solo.
 
 ## Actualizar horarios
 
