@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Franco Colapinto · Horarios 2026</title>
+<meta name="description" content="Horarios en hora argentina de cada Gran Premio de Franco Colapinto en la temporada 2026 de Fórmula 1.">
+<meta name="theme-color" content="#04142B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #04142B;
+    --card: #0A2245;
+    --card-2: #0E3366;
+    --deep: #0A2A52;
+    --blue: #0090FF;
+    --pink: #FF87BC;
+    --celeste: #74ACDF;
+    --white: #FFFFFF;
+    --nav-h: 84px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #020B18; color: var(--white); }
+  body {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---------- escenario ---------- */
+  .stage {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+    padding: 16px 16px 0; touch-action: pan-y;
+  }
+  .frame { position: relative; flex-shrink: 0; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .poster {
+    position: absolute; left: 0; top: 0; width: 1080px; height: 1350px;
+    transform-origin: 0 0; overflow: hidden; background: var(--navy);
+  }
+
+  /* ---------- placa ---------- */
+  .big43 {
+    position: absolute; top: -40px; right: -60px; font-weight: 900; font-style: italic;
+    font-size: 640px; line-height: .8; letter-spacing: -.04em; color: var(--deep);
+  }
+  .stripe { position: absolute; left: 0; top: 0; width: 1080px; height: 14px; display: flex; }
+  .stripe span { flex: 1; }
+  .lines { position: absolute; left: 0; top: 0; }
+  .content { position: relative; padding: 84px 80px 0; display: flex; flex-direction: column; }
+  .kicker { font-weight: 700; font-size: 26px; letter-spacing: .28em; color: var(--celeste); }
+  .name {
+    margin-top: 22px; font-weight: 900; font-style: italic; font-size: 132px; line-height: .86;
+    letter-spacing: -.01em; text-transform: uppercase;
+  }
+  .gp-row { margin-top: 28px; display: flex; align-items: center; gap: 18px; }
+  .gp-tag {
+    background: var(--pink); color: var(--navy); font-weight: 800; font-size: 34px;
+    letter-spacing: .06em; padding: 6px 20px; transform: skewX(-12deg); white-space: nowrap;
+  }
+  .gp-dates { font-weight: 600; font-size: 34px; letter-spacing: .06em; white-space: nowrap; }
+  .sub {
+    margin-top: 22px; display: flex; align-items: center; gap: 12px; font-weight: 700;
+    font-size: 24px; letter-spacing: .2em; color: var(--celeste);
+  }
+  .days { margin-top: 46px; display: flex; flex-direction: column; gap: 14px; }
+  .days.compact { margin-top: 40px; gap: 12px; }
+  .day { display: flex; align-items: stretch; background: var(--card); }
+  .day-badge {
+    width: 150px; flex-shrink: 0; background: var(--card-2); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 14px 0;
+  }
+  .dow { font-weight: 700; font-size: 22px; letter-spacing: .2em; color: var(--celeste); }
+  .dnum { font-weight: 900; font-size: 56px; line-height: 1; }
+  .sessions { flex: 1; display: flex; flex-direction: column; }
+  .session { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; }
+  .session + .session { border-top: 2px solid var(--navy); }
+  .s-name { font-weight: 700; font-size: 38px; letter-spacing: .02em; }
+  .s-time { font-weight: 800; font-size: 46px; }
+  .race { display: flex; align-items: stretch; background: var(--blue); color: var(--navy); }
+  .race .day-badge { background: var(--pink); padding: 18px 0; }
+  .race .dow { color: var(--navy); font-weight: 800; }
+  .race-body { flex: 1; display: flex; justify-content: space-between; align-items: center; padding: 22px 32px; }
+  .race-kicker { font-weight: 700; font-size: 22px; letter-spacing: .24em; }
+  .race-title { font-weight: 900; font-style: italic; font-size: 58px; line-height: 1; text-transform: uppercase; }
+  .race-time { font-weight: 900; font-size: 84px; line-height: 1; }
+  .footer {
+    position: absolute; left: 80px; right: 80px; bottom: 56px; display: flex;
+    justify-content: space-between; align-items: flex-end;
+  }
+  .vamos { font-weight: 800; font-style: italic; font-size: 40px; letter-spacing: .04em; }
+  .sign { font-weight: 600; font-size: 22px; letter-spacing: .18em; color: var(--celeste); }
+
+  /* ---------- navegación ---------- */
+  nav {
+    height: var(--nav-h); flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    gap: 16px; padding: 0 16px env(safe-area-inset-bottom);
+  }
+  nav button {
+    width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--celeste);
+    background: transparent; color: var(--white); cursor: pointer; display: grid; place-items: center;
+    transition: background .15s, border-color .15s;
+  }
+  nav button:hover:not(:disabled) { background: var(--card-2); border-color: var(--pink); }
+  nav button:focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
+  nav button:disabled { opacity: .3; cursor: default; }
+  .where { min-width: 0; text-align: center; line-height: 1.15; }
+  .where-gp { font-weight: 800; font-size: 20px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .where-meta { font-weight: 600; font-size: 14px; letter-spacing: .18em; color: var(--celeste); }
+  .where-meta b { color: var(--pink); font-weight: 800; }
+  .dots { display: flex; gap: 6px; justify-content: center; margin-top: 6px; }
+  .dots span { width: 6px; height: 6px; border-radius: 50%; background: #2A4A75; }
+  .dots span.on { background: var(--pink); width: 18px; border-radius: 3px; }
+  @media (max-width: 480px) {
+    .where-gp { font-size: 18px; }
+    .where-meta { font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
+  }
+</style>
+</head>
+<body>
+
+<main class="stage" id="stage" aria-live="polite">
+  <div class="frame" id="frame">
+    <div class="poster" id="poster" role="img"></div>
+  </div>
+</main>
+
+<nav aria-label="Grandes Premios">
+  <button id="prev" type="button" aria-label="Gran Premio anterior">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+  <div class="where">
+    <div class="where-gp" id="whereGp"></div>
+    <div class="where-meta" id="whereMeta"></div>
+    <div class="dots" id="dots" aria-hidden="true"></div>
+  </div>
+  <button id="next" type="button" aria-label="Gran Premio siguiente">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
+</nav>
+
+<script>
+// Horarios en hora de Argentina (GMT-3). "end" = fin aproximado de la carrera:
+// a partir de ese momento la página pasa a mostrar el siguiente GP.
+const RACES = [
+  { id: 'singapur', round: 17, gp: 'GP de Singapur', track: 'Marina Bay', dates: '9 — 11 OCT 2026',
+    sub: 'Fin de semana sprint', end: '2026-10-11T11:30:00-03:00',
+    days: [
+      { dow: 'VIE', day: '09', s: [['Práctica Libre 1', '05:30'], ['Clasificación Sprint', '09:30']] },
+      { dow: 'SÁB', day: '10', s: [['Carrera Sprint', '06:00'], ['Clasificación', '10:00']] }
+    ],
+    race: { dow: 'DOM', day: '11', time: '09:00', kicker: 'La gran cita' } },
+  { id: 'estados-unidos', round: 18, gp: 'GP de Estados Unidos', track: 'Circuito de las Américas', dates: '23 — 25 OCT 2026',
+    sub: 'Austin, Texas', end: '2026-10-25T19:00:00-03:00',
+    days: [
+      { dow: 'VIE', day: '23', s: [['Práctica Libre 1', '14:30'], ['Práctica Libre 2', '18:00']] },
+      { dow: 'SÁB', day: '24', s: [['Práctica Libre 3', '14:30'], ['Clasificación', '18:00']] }
+    ],
+    race: { dow: 'DOM', day: '25', time: '17:00', kicker: 'La gran cita' } },
+  { id: 'mexico', round: 19, gp: 'GP de México', track: 'Autódromo Hermanos Rodríguez', dates: '30 OCT — 1 NOV 2026',
+    sub: 'Ciudad de México', end: '2026-11-01T19:00:00-03:00',
+    days: [
+      { dow: 'VIE', day: '30', s: [['Práctica Libre 1', '15:30'], ['Práctica Libre 2', '19:00']] },
+      { dow: 'SÁB', day: '31', s: [['Práctica Libre 3', '14:30'], ['Clasificación', '18:00']] }
+    ],
+    race: { dow: 'DOM', day: '01', time: '17:00', kicker: 'La gran cita' } },
+  { id: 'brasil', round: 20, gp: 'GP de São Paulo', track: 'Interlagos', dates: '6 — 8 NOV 2026',
+    sub: 'São Paulo, Brasil', end: '2026-11-08T16:00:00-03:00',
+    days: [
+      { dow: 'VIE', day: '06', s: [['Práctica Libre 1', '12:30'], ['Práctica Libre 2', '16:00']] },
+      { dow: 'SÁB', day: '07', s: [['Práctica Libre 3', '11:30'], ['Clasificación', '15:00']] }
+    ],
+    race: { dow: 'DOM', day: '08', time: '14:00', kicker: 'La gran cita' } },
+  { id: 'las-vegas', round: 21, gp: 'GP de Las Vegas', track: 'Las Vegas Strip', dates: '19 — 22 NOV 2026',
+    sub: 'Todo de noche / madrugada', end: '2026-11-22T03:00:00-03:00', compact: true,
+    days: [
+      { dow: 'JUE', day: '19', s: [['Práctica Libre 1', '21:30']] },
+      { dow: 'VIE', day: '20', s: [['Práctica Libre 2', '01:00'], ['Práctica Libre 3', '21:30']] },
+      { dow: 'SÁB', day: '21', s: [['Clasificación', '01:00']] }
+    ],
+    race: { dow: 'DOM', day: '22', time: '01:00', kicker: 'Sábado a la noche' } },
+  { id: 'qatar', round: 22, gp: 'GP de Qatar', track: 'Lusail', dates: '27 — 29 NOV 2026',
+    sub: 'Lusail, Qatar', end: '2026-11-29T15:00:00-03:00',
+    days: [
+      { dow: 'VIE', day: '27', s: [['Práctica Libre 1', '10:30'], ['Práctica Libre 2', '14:00']] },
+      { dow: 'SÁB', day: '28', s: [['Práctica Libre 3', '11:30'], ['Clasificación', '15:00']] }
+    ],
+    race: { dow: 'DOM', day: '29', time: '13:00', kicker: 'La gran cita' } },
+  { id: 'abu-dabi', round: 23, gp: 'GP de Abu Dabi', track: 'Yas Marina · Última fecha', dates: '4 — 6 DIC 2026',
+    sub: 'Yas Marina, EAU', end: '2026-12-06T12:00:00-03:00',
+    days: [
+      { dow: 'VIE', day: '04', s: [['Práctica Libre 1', '06:30'], ['Práctica Libre 2', '10:00']] },
+      { dow: 'SÁB', day: '05', s: [['Práctica Libre 3', '07:30'], ['Clasificación', '11:00']] }
+    ],
+    race: { dow: 'DOM', day: '06', time: '10:00', kicker: 'La gran cita' } }
+];
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clock = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#74ACDF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+
+function posterHTML(r) {
+  const days = r.days.map((d) => `
+    <div class="day">
+      <div class="day-badge"><div class="dow">${d.dow}</div><div class="dnum">${d.day}</div></div>
+      <div class="sessions">${d.s.map(([n, t]) => `
+        <div class="session"><div class="s-name">${esc(n)}</div><div class="s-time">${t}</div></div>`).join('')}
+      </div>
+    </div>`).join('');
+  return `
+    <div class="big43" aria-hidden="true">43</div>
+    <div class="stripe" aria-hidden="true">
+      <span style="background:#74ACDF"></span><span style="background:#fff"></span><span style="background:#74ACDF"></span>
+      <span style="background:#0090FF;flex:1.4"></span><span style="background:#FF87BC"></span>
+    </div>
+    <svg class="lines" width="1080" height="1350" viewBox="0 0 1080 1350" aria-hidden="true">
+      <path d="M -40 1180 L 380 1180 L 470 1090 L 1120 1090" fill="none" stroke="#0090FF" stroke-width="10"/>
+      <path d="M -40 1214 L 396 1214 L 486 1124 L 1120 1124" fill="none" stroke="#FF87BC" stroke-width="10"/>
+    </svg>
+    <div class="content">
+      <div class="kicker">FÓRMULA 1 · FECHA ${r.round} · ${esc(r.track.toUpperCase())}</div>
+      <div class="name">Franco<br>Colapinto</div>
+      <div class="gp-row">
+        <div class="gp-tag">${esc(r.gp.toUpperCase())}</div>
+        <div class="gp-dates">${r.dates}</div>
+      </div>
+      <div class="sub">${clock} HORARIOS DE ARGENTINA (GMT−3) · ${esc(r.sub.toUpperCase())}</div>
+      <div class="days${r.compact ? ' compact' : ''}">
+        ${days}
+        <div class="race">
+          <div class="day-badge"><div class="dow">${r.race.dow}</div><div class="dnum">${r.race.day}</div></div>
+          <div class="race-body">
+            <div><div class="race-kicker">${esc(r.race.kicker.toUpperCase())}</div><div class="race-title">Carrera</div></div>
+            <div class="race-time">${r.race.time}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><div class="vamos">VAMOS FRANCO</div><div class="sign">ARGENTINA · #43</div></div>`;
+}
+
+const $ = (id) => document.getElementById(id);
+const stage = $('stage'), frame = $('frame'), poster = $('poster');
+const now = Date.now();
+const upcomingIdx = (() => {
+  const i = RACES.findIndex((r) => Date.parse(r.end) > now);
+  return i === -1 ? RACES.length - 1 : i;
+})();
+let idx = upcomingIdx;
+
+$('dots').innerHTML = RACES.map(() => '<span></span>').join('');
+
+function fit() {
+  const cs = getComputedStyle(stage);
+  const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const h = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const s = Math.max(0.1, Math.min(w / 1080, h / 1350));
+  frame.style.width = 1080 * s + 'px';
+  frame.style.height = 1350 * s + 'px';
+  poster.style.transform = `scale(${s})`;
+}
+
+function status(i) {
+  if (Date.parse(RACES[i].end) <= now) return 'Finalizado';
+  if (i === upcomingIdx) return '<b>Próxima carrera</b>';
+  return 'Próximamente';
+}
+
+function show(i, push) {
+  idx = Math.max(0, Math.min(RACES.length - 1, i));
+  const r = RACES[idx];
+  poster.innerHTML = posterHTML(r);
+  poster.setAttribute('aria-label', `${r.gp}: horarios en hora argentina. Carrera el ${r.race.dow} ${r.race.day} a las ${r.race.time}.`);
+  $('whereGp').textContent = r.gp;
+  $('whereMeta').innerHTML = `FECHA ${r.round} DE 23 · ${status(idx).toUpperCase()}`;
+  [...$('dots').children].forEach((d, k) => d.classList.toggle('on', k === idx));
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === RACES.length - 1;
+  document.title = `Colapinto · ${r.gp}`;
+  if (push) history.replaceState(null, '', '#' + r.id);
+}
+
+$('prev').addEventListener('click', () => show(idx - 1, true));
+$('next').addEventListener('click', () => show(idx + 1, true));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') show(idx - 1, true);
+  if (e.key === 'ArrowRight') show(idx + 1, true);
+});
+
+let x0 = null;
+stage.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+stage.addEventListener('touchend', (e) => {
+  if (x0 === null) return;
+  const dx = e.changedTouches[0].clientX - x0;
+  if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1), true);
+  x0 = null;
+});
+
+const fromHash = RACES.findIndex((r) => '#' + r.id === location.hash);
+show(fromHash === -1 ? upcomingIdx : fromHash, false);
+fit();
+window.addEventListener('resize', fit);
+</script>
+</body>
+</html>
