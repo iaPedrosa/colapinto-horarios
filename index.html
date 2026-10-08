@@ -44,10 +44,12 @@
 
   /* ---------- escenario ---------- */
   .stage {
-    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+    flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: flex-start;
     padding: calc(16px + env(safe-area-inset-top)) 16px 0;
+    overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    touch-action: pan-y;
   }
-  .frame { position: relative; flex-shrink: 0; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .frame { position: relative; flex-shrink: 0; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
   .poster {
     position: absolute; left: 0; top: 0; width: 1080px; height: 1350px;
     transform-origin: 0 0; overflow: hidden; background: var(--navy);
@@ -389,7 +391,16 @@ $('dots').innerHTML = RACES.map(() => '<span></span>').join('');
 // En pantallas angostas y altas (celular) la placa pasa a 720 px de ancho y se estira
 // a lo alto para llenar la pantalla: todo se ve más grande.
 let mobile = null;
-let posterW = 1080;
+let posterW = 1080, baseH = 1350, scale = 1;
+// Si el contenido no entra en la placa, la placa crece hacia abajo y se puede scrollear.
+function relayout() {
+  const c = poster.querySelector('.content');
+  const need = c ? Math.ceil(c.offsetTop + c.offsetHeight + (mobile ? 150 : 170)) : 0;
+  const H = Math.max(baseH, need);
+  poster.style.height = H + 'px';
+  frame.style.height = H * scale + 'px';
+}
+function paint(html) { poster.innerHTML = html; relayout(); }
 function fit() {
   const cs = getComputedStyle(stage);
   const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -404,7 +415,8 @@ function fit() {
   frame.style.width = W * s + 'px';
   frame.style.height = H * s + 'px';
   poster.style.transform = `scale(${s})`;
-  posterW = W;
+  posterW = W; baseH = H; scale = s;
+  relayout();
   if (mobile !== isMobile) {
     const first = mobile === null;
     mobile = isMobile;
@@ -437,30 +449,31 @@ $('segRes').addEventListener('click', () => setView('results'));
 $('segSch').addEventListener('click', () => setView('schedule'));
 
 function renderSchedule(r) {
-  poster.innerHTML = posterHTML(r);
+  paint(posterHTML(r));
   poster.setAttribute('aria-label', `${r.gp}: horarios en hora argentina. Carrera el ${r.race.dow} ${r.race.day} a las ${r.race.time}.`);
 }
 
 function renderResults(r) {
   const my = ++token;
   poster.setAttribute('aria-label', `${r.gp}: resultado de Franco Colapinto.`);
-  poster.innerHTML = messageHTML(r, 'Cargando<br>resultados…', 'Buscando los datos de la carrera.');
+  paint(messageHTML(r, 'Cargando<br>resultados…', 'Buscando los datos de la carrera.'));
   window.Results.load(r).then((data) => {
     if (my !== token) return;
     if (!data) {
-      poster.innerHTML = messageHTML(r, 'Resultados<br>en camino',
-        'Los datos oficiales suelen aparecer unas horas después de la bandera a cuadros. Volvé a entrar más tarde.');
+      paint(messageHTML(r, 'Resultados<br>en camino',
+        'Los datos oficiales suelen aparecer unas horas después de la bandera a cuadros. Volvé a entrar más tarde.'));
       return;
     }
-    poster.innerHTML = resultsShell(r, window.Results.render(r, data, resultsHead(r), { width: posterW - (mobile ? 80 : 160) }), true);
+    paint(resultsShell(r, window.Results.render(r, data, resultsHead(r), { width: posterW - (mobile ? 80 : 160) }), true));
   }).catch(() => {
     if (my !== token) return;
-    poster.innerHTML = messageHTML(r, 'Sin conexión<br>con los datos', 'No pudimos cargar los resultados. Probá de nuevo en un rato.');
+    paint(messageHTML(r, 'Sin conexión<br>con los datos', 'No pudimos cargar los resultados. Probá de nuevo en un rato.'));
   });
 }
 
 function show(i, push) {
   idx = Math.max(0, Math.min(RACES.length - 1, i));
+  stage.scrollTop = 0;
   const r = RACES[idx];
   const done = finished(r);
   $('seg').classList.toggle('on', done && !!r.days);
@@ -499,11 +512,14 @@ document.addEventListener('touchend', (e) => {
 document.addEventListener('dblclick', (e) => e.preventDefault());
 
 let x0 = null;
-stage.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+let y0 = null;
+stage.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
 stage.addEventListener('touchend', (e) => {
   if (x0 === null) return;
   const dx = e.changedTouches[0].clientX - x0;
-  if (Math.abs(dx) > 50) show(idx + (dx < 0 ? 1 : -1), true);
+  const dy = e.changedTouches[0].clientY - y0;
+  // Solo cuenta como cambio de carrera si el gesto es claramente horizontal (no al scrollear).
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(idx + (dx < 0 ? 1 : -1), true);
   x0 = null;
 });
 
@@ -511,6 +527,7 @@ const fromHash = RACES.findIndex((r) => '#' + r.id === location.hash);
 fit();
 show(fromHash === -1 ? upcomingIdx : fromHash, false);
 window.addEventListener('resize', fit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
 </script>
 </body>
 </html>
