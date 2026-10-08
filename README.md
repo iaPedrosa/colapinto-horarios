@@ -45,6 +45,6 @@ después de una carrera), consulta la API directamente.
 
 ## Actualizar horarios
 
-Todos los datos están en el arreglo `RACES` dentro de `index.html`. El campo `end` indica cuándo termina la carrera: pasado ese momento la página salta sola al siguiente GP.
+El calendario está en el arreglo `RACES` dentro de `races.js`. El campo `end` indica cuándo termina la carrera: pasado ese momento la página salta sola al siguiente GP.
 
 Horarios tomados del calendario oficial de formula1.com y convertidos a hora argentina.
