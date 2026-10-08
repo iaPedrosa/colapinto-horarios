@@ -1,0 +1,74 @@
+# Guarda los datos de las APIs en data/ y publica la página en GitHub Pages.
+#
+# - En fin de semana de carrera (viernes a lunes, hora UTC): cada 30 minutos.
+# - El resto de la semana: una vez por día.
+# - También se puede correr a mano desde la pestaña Actions ("Run workflow").
+# - Cada push a main vuelve a publicar la página.
+name: Datos y publicación
+
+on:
+  schedule:
+    - cron: '*/30 * * * 5,6,0,1'
+    - cron: '17 12 * * 2,3,4'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: datos-y-publicacion
+  cancel-in-progress: false
+
+jobs:
+  datos:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      cambios: ${{ steps.guardar.outputs.cambios }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Descargar datos
+        run: node scripts/update-data.mjs
+      - name: Guardar cambios
+        id: guardar
+        run: |
+          if [ -n "$(git status --porcelain data)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data
+            git commit -m "Datos actualizados"
+            git push
+            echo "cambios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Sin cambios en los datos."
+          fi
+
+  publicar:
+    needs: datos
+    # Se publica si hubo un push, si se corrió a mano o si cambiaron los datos.
+    if: >-
+      always() &&
+      (needs.datos.result == 'success' || needs.datos.result == 'skipped') &&
+      (github.event_name != 'schedule' || needs.datos.outputs.cambios == 'true')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4

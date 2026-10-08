@@ -2,9 +2,14 @@
 // Fuentes gratuitas y sin cuenta:
 //   - Jolpica-F1 (ex Ergast): resultado, largada, puntos, clasificación, sprint y top 10.
 //   - OpenF1 (datos históricos): vueltas, velocidad, neumáticos, paradas y posición vuelta a vuelta.
+//
+// Para no consultar las APIs en cada visita, un proceso de GitHub (scripts/update-data.mjs)
+// guarda los datos en la carpeta data/. La página lee primero esos archivos y solo
+// va a la API si falta el archivo o quedó desactualizado.
 (function () {
-  const JOLPICA = 'https://api.jolpi.ca/ergast/f1';
-  const OPENF1 = 'https://api.openf1.org/v1';
+  const API = (typeof window !== 'undefined' && window.F1_API) || {};
+  const JOLPICA = API.jolpica || 'https://api.jolpi.ca/ergast/f1';
+  const OPENF1 = API.openf1 || 'https://api.openf1.org/v1';
   const NUM = 43;
   const CACHE_V = 'r1';
 
@@ -23,14 +28,43 @@
     try { localStorage.setItem(CACHE_V + ':' + key, JSON.stringify(val)); } catch (e) { /* sin almacenamiento: no pasa nada */ }
   }
 
+  // Archivo guardado en data/ (null si no existe o no se pudo leer).
+  async function getStatic(name) {
+    try {
+      const res = await fetch(`data/${name}.json`, { cache: 'no-cache' });
+      return res.ok ? await res.json() : null;
+    } catch (e) { return null; }
+  }
+
   const dayMs = 86400000;
+  // Último GP que ya terminó (con 2 h de margen para que se publiquen los datos).
+  function lastFinishedRace() {
+    const t = Date.now();
+    const done = (window.RACES || []).filter((r) => Date.parse(r.end) + 2 * 3600000 < t);
+    return done[done.length - 1] || null;
+  }
+  // ¿El archivo ya incluye el último GP terminado?
+  function upToDate(file) {
+    const lf = lastFinishedRace();
+    if (!lf) return true;
+    return !!(file && file.lastRaceDate && Date.parse(file.lastRaceDate) >= Date.parse(lf.raceDay) - 1.5 * dayMs);
+  }
+
+  // Calendario según Jolpica (para saber la fecha real de cada ronda).
+  let seasonList = null;
+  async function seasonRaces() {
+    if (!seasonList) {
+      const data = await getJSON(`${JOLPICA}/2026.json?limit=40`);
+      seasonList = data.MRData.RaceTable.Races || [];
+    }
+    return seasonList;
+  }
   const near = (a, b) => Math.abs(Date.parse(a) - Date.parse(b)) <= 1.5 * dayMs;
   const isFranco = (d) => d && (d.permanentNumber === String(NUM) || /colapinto/i.test(d.familyName || '') || d.driverId === 'colapinto');
 
   // ---------- Jolpica ----------
   async function jolpicaRound(race) {
-    const data = await getJSON(`${JOLPICA}/2026.json?limit=40`);
-    const races = data.MRData.RaceTable.Races || [];
+    const races = await seasonRaces();
     const hit = races.find((x) => near(x.date, race.raceDay)) || races.find((x) => String(x.round) === String(race.round));
     return hit ? hit.round : race.round;
   }
@@ -107,9 +141,8 @@
     };
   }
 
-  async function load(race) {
-    const cached = cacheGet(race.id);
-    if (cached && cached.complete) return cached;
+  // Datos de un GP directo de las APIs.
+  async function fetchRace(race) {
     const [j, o] = await Promise.allSettled([jolpica(race), openf1(race)]);
     const data = {
       j: j.status === 'fulfilled' ? j.value : null,
@@ -117,7 +150,18 @@
     };
     if (!data.j && !data.o) return null;
     data.complete = !!(data.j && data.o);
-    if (data.complete) cacheSet(race.id, data);
+    return data;
+  }
+
+  // En la página: navegador → archivo guardado → API.
+  async function load(race) {
+    const cached = cacheGet(race.id);
+    if (cached && cached.complete) return cached;
+    const saved = await getStatic('race-' + race.id);
+    if (saved && saved.complete) { cacheSet(race.id, saved); return saved; }
+    const data = await fetchRace(race);
+    if (!data && saved) return saved;
+    if (data && data.complete) cacheSet(race.id, data);
     return data;
   }
 
@@ -223,12 +267,7 @@
 
   // ---------- tabla del campeonato ----------
   // Se guarda una hora en el navegador: cambia solo después de cada carrera.
-  async function loadStandings() {
-    const KEY = 'standings2';
-    try {
-      const c = cacheGet(KEY);
-      if (c && Date.now() - c.at < 3600000) return c.data;
-    } catch (e) { /* sin caché */ }
+  async function fetchStandings() {
     const [d, c] = await Promise.all([
       getJSON(`${JOLPICA}/2026/driverstandings.json?limit=40`),
       getJSON(`${JOLPICA}/2026/constructorstandings.json?limit=40`)
@@ -236,8 +275,11 @@
     const dl = d.MRData.StandingsTable.StandingsLists[0];
     const cl = c.MRData.StandingsTable.StandingsLists[0];
     if (!dl && !cl) return null;
-    const data = {
-      round: (dl && dl.round) || (cl && cl.round) || null,
+    const round = (dl && dl.round) || (cl && cl.round) || null;
+    const rr = round ? (await seasonRaces()).find((x) => String(x.round) === String(round)) : null;
+    return {
+      round,
+      lastRaceDate: rr ? rr.date : null,
       drivers: dl ? dl.DriverStandings.map((x) => ({
         pos: x.positionText || x.position, pts: Number(x.points), wins: Number(x.wins || 0),
         name: `${x.Driver.givenName || ''} ${x.Driver.familyName || ''}`.trim(),
@@ -251,9 +293,24 @@
         name: teamName(x.Constructor.name), me: /alpine/i.test(x.Constructor.name || '')
       })) : []
     };
-    cacheSet(KEY, { at: Date.now(), data });
-    return data;
   }
+
+  // Navegador (1 h) → archivo guardado si está al día → API → archivo aunque esté viejo.
+  async function cachedOrFetch(key, fileName, fetcher) {
+    const c = cacheGet(key);
+    if (c && Date.now() - c.at < 3600000 && upToDate(c.data)) return c.data;
+    const saved = await getStatic(fileName);
+    if (saved && upToDate(saved)) { cacheSet(key, { at: Date.now(), data: saved }); return saved; }
+    try {
+      const data = await fetcher();
+      if (data) { cacheSet(key, { at: Date.now(), data }); return data; }
+    } catch (e) {
+      if (!saved) throw e;
+    }
+    return saved;
+  }
+
+  const loadStandings = () => cachedOrFetch('standings3', 'standings', fetchStandings);
 
   const teamName = (n) => String(n || '').replace(/\s+F1 Team$/i, '');
 
@@ -307,21 +364,19 @@
     return { races, quali, sprint };
   }
 
-  async function loadSeason() {
-    const KEY = 'season1';
-    const c = cacheGet(KEY);
-    if (c && Date.now() - c.at < 3600000) return c.data;
-    const st = await loadStandings();
+  async function fetchSeason(standings) {
+    const st = standings || await loadStandings();
     if (!st) return null;
     const me = st.drivers.find((d) => d.me);
     const mate = st.drivers.find((d) => !d.me && /alpine/i.test(d.team));
     const meId = (me && me.id) || 'colapinto';
     const mateId = (mate && mate.id) || 'gasly';
     const [a, b] = await Promise.all([driverSeason(meId), driverSeason(mateId)]);
-    const data = { round: st.round, me: me || { last: 'Colapinto' }, mate: mate || { last: 'Gasly' }, a, b };
-    cacheSet(KEY, { at: Date.now(), data });
-    return data;
+    return { round: st.round, lastRaceDate: st.lastRaceDate || null,
+      me: me || { last: 'Colapinto' }, mate: mate || { last: 'Gasly' }, a, b };
   }
+
+  const loadSeason = () => cachedOrFetch('season2', 'season', () => fetchSeason());
 
   function cumulative(d) {
     const rounds = [...new Set([...Object.keys(d.races), ...Object.keys(d.sprint)].map(Number))].sort((x, y) => x - y);
@@ -421,5 +476,9 @@
       <div class="sz-chips">${chips}</div>`;
   }
 
-  window.Results = { load, render, loadStandings, renderStandings, loadSeason, renderSeason };
+  window.Results = {
+    load, render, loadStandings, renderStandings, loadSeason, renderSeason,
+    // usados por scripts/update-data.mjs
+    fetchRace, fetchStandings, fetchSeason
+  };
 })();

@@ -25,11 +25,23 @@ Los resultados suelen aparecer unas horas después de la carrera. Una vez comple
 - **Tabla**: campeonato de pilotos y de constructores.
 - **Temporada**: el año de Franco (puntos, mejor resultado, promedio, abandonos, resultado de cada fecha) y el duelo con su compañero de Alpine en clasificación, carrera y puntos.
 
+## Datos guardados (sin llamar a las APIs en cada visita)
+
+Un proceso de GitHub Actions (`.github/workflows/update-data.yml`) corre `scripts/update-data.mjs`,
+que descarga los datos y los guarda en `data/`:
+
+- En fin de semana de carrera, cada 30 minutos; el resto de la semana, una vez por día.
+- Un GP terminado y completo se guarda una vez y no se vuelve a pedir.
+- La tabla y la temporada se reescriben solo si cambiaron.
+
+La página lee primero esos archivos. Si falta alguno o quedó desactualizado (por ejemplo, justo
+después de una carrera), consulta la API directamente.
+
 ## Publicarla con GitHub Pages
 
 1. En el repo, entrá a **Settings → Pages**.
-2. En *Build and deployment* elegí **Deploy from a branch**, rama `main` y carpeta `/ (root)`.
-3. Guardá. En un par de minutos la página queda en `https://<tu-usuario>.github.io/<nombre-del-repo>/`.
+2. En *Build and deployment → Source* elegí **GitHub Actions**.
+3. Listo: el workflow publica la página en cada cambio. En un par de minutos la página queda en `https://<tu-usuario>.github.io/<nombre-del-repo>/`.
 
 ## Actualizar horarios
 
