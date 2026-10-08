@@ -413,6 +413,11 @@
       <div class="r-label">DUELO EN ALPINE · <span style="color:#FF87BC">${esc((d.me.last || 'Colapinto').toUpperCase())}</span> VS <span style="color:#74ACDF">${esc((d.mate.last || 'Gasly').toUpperCase())}</span></div>
       <div class="du">${duel}</div>
       <div class="r-label">CARRERA A CARRERA</div>
+      <div class="sz-legend">
+        <span><i class="pts"></i>SUMÓ PUNTOS</span>
+        <span><i></i>SIN PUNTOS</span>
+        <span><i class="out"></i>ABANDONO</span>
+      </div>
       <div class="sz-chips">${chips}</div>`;
   }
 
