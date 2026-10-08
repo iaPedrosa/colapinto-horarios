@@ -109,9 +109,11 @@
 
   /* ---------- navegación ---------- */
   nav {
-    min-height: var(--nav-h); flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    gap: 16px; padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+    flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 10px 16px calc(8px + env(safe-area-inset-bottom));
   }
+  .ctrls { display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; max-width: 560px; }
+  .ctrls .where { flex: 1; }
   nav button {
     width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--celeste);
     background: transparent; color: var(--white); cursor: pointer; display: grid; place-items: center;
@@ -128,10 +130,10 @@
   .dots span { width: 6px; height: 6px; border-radius: 50%; background: #2A4A75; }
   .dots span.on { background: var(--pink); width: 18px; border-radius: 3px; }
   /* ---------- selector resultados / horarios ---------- */
-  .seg { display: none; margin: 6px auto 0; padding: 3px; border-radius: 999px; background: #0A2245; width: max-content; }
-  .seg.on { display: flex; }
+  .seg { display: flex; padding: 3px; border-radius: 999px; background: #0A2245; width: max-content; max-width: 100%; }
+  .seg button[hidden] { display: none; }
   .seg button {
-    width: auto; height: 30px; border: 0; border-radius: 999px; padding: 0 14px; font: 700 14px/1 'Barlow Condensed', sans-serif;
+    width: auto; height: 34px; border: 0; border-radius: 999px; padding: 0 16px; font: 700 15px/1 'Barlow Condensed', sans-serif;
     letter-spacing: .12em; color: var(--celeste); background: transparent;
   }
   nav .seg button[aria-pressed="true"] { background: var(--pink); color: var(--navy); }
@@ -198,6 +200,32 @@
   .poster.m .r-msg span { font-size: 34px; }
   .poster.m .r-src { right: 40px; bottom: 16px; }
 
+  /* ---------- tabla del campeonato ---------- */
+  .st-cols { margin-top: 30px; display: grid; gap: 34px; grid-template-columns: minmax(0, 1fr); }
+  .st-cols.two { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; }
+  .st-list { display: flex; flex-direction: column; gap: 5px; }
+  .st-row { position: relative; display: flex; align-items: center; gap: 12px; background: var(--card); padding: 7px 14px; overflow: hidden; }
+  .st-bar { position: absolute; left: 0; top: 0; bottom: 0; background: #12345F; }
+  .st-row > *:not(.st-bar) { position: relative; }
+  .st-pos { width: 34px; flex-shrink: 0; font-weight: 800; font-size: 22px; color: var(--celeste); }
+  .st-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.05; }
+  .st-who b { font-weight: 800; font-size: 25px; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-who span { font-weight: 600; font-size: 16px; letter-spacing: .08em; color: var(--celeste); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-pts { font-weight: 900; font-size: 28px; white-space: nowrap; }
+  .st-pts small { font-weight: 700; font-size: 15px; letter-spacing: .1em; color: var(--celeste); margin-left: 4px; }
+  .st-row.me { background: var(--pink); color: var(--navy); }
+  .st-row.me .st-bar { background: #FFA8CF; }
+  .st-row.me .st-pos, .st-row.me .st-who span, .st-row.me .st-pts small { color: var(--navy); }
+  .st-row.team { background: #0067C2; }
+  .st-row.team .st-bar { background: var(--blue); }
+  .st-row.team .st-pos, .st-row.team .st-who span, .st-row.team .st-pts small { color: #DDEBFF; }
+  .poster.m .st-who b { font-size: 30px; }
+  .poster.m .st-who span { font-size: 18px; }
+  .poster.m .st-pos { font-size: 26px; width: 42px; }
+  .poster.m .st-pts { font-size: 32px; }
+  .poster.m .st-row { padding: 9px 16px; }
+  .content.st .name { white-space: nowrap; }
+
   @media (max-width: 480px) {
     .where-gp { font-size: 18px; }
     .where-meta { font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
@@ -213,21 +241,24 @@
 </main>
 
 <nav aria-label="Grandes Premios">
+  <div class="seg" id="seg" role="group" aria-label="Ver">
+    <button type="button" id="segRes" aria-pressed="true">RESULTADOS</button>
+    <button type="button" id="segSch" aria-pressed="false">HORARIOS</button>
+    <button type="button" id="segTab" aria-pressed="false">TABLA</button>
+  </div>
+  <div class="ctrls">
   <button id="prev" type="button" aria-label="Gran Premio anterior">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
   </button>
   <div class="where">
     <div class="where-gp" id="whereGp"></div>
     <div class="where-meta" id="whereMeta"></div>
-    <div class="seg" id="seg" role="group" aria-label="Ver">
-      <button type="button" id="segRes" aria-pressed="true">RESULTADOS</button>
-      <button type="button" id="segSch" aria-pressed="false">HORARIOS</button>
-    </div>
     <div class="dots" id="dots" aria-hidden="true"></div>
   </div>
   <button id="next" type="button" aria-label="Gran Premio siguiente">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
   </button>
+  </div>
 </nav>
 
 <script src="results.js"></script>
@@ -436,17 +467,39 @@ RACES.forEach((r) => {
   if (r.days) r.sprint = r.days.some((d) => d.s.some(([n]) => /sprint/i.test(n)));
 });
 const finished = (r) => Date.parse(r.end) <= now;
-let view = 'results';   // en los GP terminados: 'results' o 'schedule'
+let view = 'gp';        // 'gp' (resultados si terminó, si no horarios), 'schedule' o 'standings'
 let token = 0;          // evita que una respuesta lenta pise otro GP
 
 function setView(v) {
   view = v;
-  $('segRes').setAttribute('aria-pressed', String(v === 'results'));
-  $('segSch').setAttribute('aria-pressed', String(v === 'schedule'));
   show(idx, false);
 }
-$('segRes').addEventListener('click', () => setView('results'));
+$('segRes').addEventListener('click', () => setView('gp'));
 $('segSch').addEventListener('click', () => setView('schedule'));
+$('segTab').addEventListener('click', () => setView('standings'));
+
+function standingsHead(round) {
+  return `
+    <div class="kicker">FÓRMULA 1 · TEMPORADA 2026${round ? ' · TRAS LA FECHA ' + round : ''}</div>
+    <div class="name">Campeonato</div>
+    <div class="gp-row"><div class="gp-tag">PILOTOS Y CONSTRUCTORES</div></div>`;
+}
+
+function renderStandings() {
+  const my = ++token;
+  poster.setAttribute('aria-label', 'Campeonato de pilotos y de constructores 2026.');
+  const shell = (inner, src) => `${backdrop(false)}<div class="content res st">${inner}</div>
+    ${src ? '<div class="r-src">DATOS: JOLPICA-F1</div>' : ''}${FOOTER}`;
+  paint(shell(`${standingsHead()}<div class="r-msg"><b>Cargando<br>tabla…</b></div>`));
+  window.Results.loadStandings().then((d) => {
+    if (my !== token) return;
+    if (!d) { paint(shell(`${standingsHead()}<div class="r-msg"><b>Tabla no<br>disponible</b><span>Probá de nuevo en un rato.</span></div>`)); return; }
+    paint(shell(standingsHead(d.round) + window.Results.renderStandings(d, { twoCols: !mobile }), true));
+  }).catch(() => {
+    if (my !== token) return;
+    paint(shell(`${standingsHead()}<div class="r-msg"><b>Sin conexión<br>con los datos</b><span>Probá de nuevo en un rato.</span></div>`));
+  });
+}
 
 function renderSchedule(r) {
   paint(posterHTML(r));
@@ -476,8 +529,15 @@ function show(i, push) {
   stage.scrollTop = 0;
   const r = RACES[idx];
   const done = finished(r);
-  $('seg').classList.toggle('on', done && !!r.days);
-  if (done && (view === 'results' || !r.days)) renderResults(r);
+  if (view === 'schedule' && !r.days) view = 'gp';
+  const mode = view === 'standings' ? 'standings' : (done && view === 'gp') ? 'results' : 'schedule';
+  $('segRes').hidden = !done;
+  $('segSch').hidden = !r.days;
+  $('segRes').setAttribute('aria-pressed', String(mode === 'results'));
+  $('segSch').setAttribute('aria-pressed', String(mode === 'schedule'));
+  $('segTab').setAttribute('aria-pressed', String(mode === 'standings'));
+  if (mode === 'standings') renderStandings();
+  else if (mode === 'results') renderResults(r);
   else { token++; renderSchedule(r); }
   $('whereGp').textContent = r.gp;
   $('whereMeta').innerHTML = `FECHA ${r.round} DE 23 · ${status(idx).toUpperCase()}`;
@@ -487,11 +547,12 @@ function show(i, push) {
   if (push) history.replaceState(null, '', '#' + r.id);
 }
 
-$('prev').addEventListener('click', () => show(idx - 1, true));
-$('next').addEventListener('click', () => show(idx + 1, true));
+function go(i) { if (view === 'standings') view = 'gp'; show(i, true); }
+$('prev').addEventListener('click', () => go(idx - 1));
+$('next').addEventListener('click', () => go(idx + 1));
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft') show(idx - 1, true);
-  if (e.key === 'ArrowRight') show(idx + 1, true);
+  if (e.key === 'ArrowLeft') go(idx - 1);
+  if (e.key === 'ArrowRight') go(idx + 1);
 });
 
 // Sin zoom: bloquea el pellizco y el doble toque (Safari en iPhone ignora user-scalable=no).
@@ -519,7 +580,7 @@ stage.addEventListener('touchend', (e) => {
   const dx = e.changedTouches[0].clientX - x0;
   const dy = e.changedTouches[0].clientY - y0;
   // Solo cuenta como cambio de carrera si el gesto es claramente horizontal (no al scrollear).
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(idx + (dx < 0 ? 1 : -1), true);
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(idx + (dx < 0 ? 1 : -1));
   x0 = null;
 });
 

@@ -221,5 +221,61 @@
       ${top}`;
   }
 
-  window.Results = { load, render };
+  // ---------- tabla del campeonato ----------
+  // Se guarda una hora en el navegador: cambia solo después de cada carrera.
+  async function loadStandings() {
+    const KEY = 'standings';
+    try {
+      const c = cacheGet(KEY);
+      if (c && Date.now() - c.at < 3600000) return c.data;
+    } catch (e) { /* sin caché */ }
+    const [d, c] = await Promise.all([
+      getJSON(`${JOLPICA}/2026/driverstandings.json?limit=40`),
+      getJSON(`${JOLPICA}/2026/constructorstandings.json?limit=40`)
+    ]);
+    const dl = d.MRData.StandingsTable.StandingsLists[0];
+    const cl = c.MRData.StandingsTable.StandingsLists[0];
+    if (!dl && !cl) return null;
+    const data = {
+      round: (dl && dl.round) || (cl && cl.round) || null,
+      drivers: dl ? dl.DriverStandings.map((x) => ({
+        pos: x.positionText || x.position, pts: Number(x.points), wins: Number(x.wins || 0),
+        name: `${x.Driver.givenName || ''} ${x.Driver.familyName || ''}`.trim(),
+        last: x.Driver.familyName || '',
+        team: teamName((x.Constructors && x.Constructors.length ? x.Constructors[x.Constructors.length - 1].name : '')),
+        me: isFranco(x.Driver)
+      })) : [],
+      teams: cl ? cl.ConstructorStandings.map((x) => ({
+        pos: x.positionText || x.position, pts: Number(x.points), wins: Number(x.wins || 0),
+        name: teamName(x.Constructor.name), me: /alpine/i.test(x.Constructor.name || '')
+      })) : []
+    };
+    cacheSet(KEY, { at: Date.now(), data });
+    return data;
+  }
+
+  const teamName = (n) => String(n || '').replace(/\s+F1 Team$/i, '');
+
+  function standingsList(rows, title, kind) {
+    if (!rows.length) return '';
+    const max = Math.max(1, ...rows.map((r) => r.pts));
+    const items = rows.map((r) => `
+      <div class="st-row${r.me ? (kind === 'teams' ? ' team' : ' me') : ''}">
+        <div class="st-bar" style="width:${((r.pts / max) * 100).toFixed(1)}%"></div>
+        <div class="st-pos">${esc(r.pos)}</div>
+        <div class="st-who"><b>${esc((kind === 'drivers' ? r.last : r.name).toUpperCase())}</b>${kind === 'drivers' && r.team ? `<span>${esc(r.team.toUpperCase())}</span>` : ''}</div>
+        <div class="st-pts">${r.pts}<small>PTS</small></div>
+      </div>`).join('');
+    return `<div><div class="r-label" style="margin-top:0">${title}</div><div class="st-list">${items}</div></div>`;
+  }
+
+  function renderStandings(d, opts) {
+    const two = opts && opts.twoCols;
+    return `<div class="st-cols${two ? ' two' : ''}">
+      ${standingsList(d.drivers, 'PILOTOS', 'drivers')}
+      ${standingsList(d.teams, 'CONSTRUCTORES', 'teams')}
+    </div>`;
+  }
+
+  window.Results = { load, render, loadStandings, renderStandings };
 })();
