@@ -139,9 +139,9 @@
     INTERMEDIATE: ['#43B02A', '#FFFFFF', 'I'], WET: ['#0067FF', '#FFFFFF', 'W']
   };
 
-  function chart(perLap) {
+  function chart(perLap, W) {
     if (!perLap || perLap.length < 2) return '';
-    const W = 920, H = 140, padL = 44, padR = 16, padT = 14, padB = 26;
+    const H = W < 800 ? 190 : 140, padL = 44, padR = 16, padT = 14, padB = 26;
     const maxP = Math.max(22, ...perLap);
     const x = (i) => padL + (i / (perLap.length - 1)) * (W - padL - padR);
     const y = (p) => padT + ((p - 1) / (maxP - 1)) * (H - padT - padB);
@@ -168,13 +168,16 @@
     const segs = stints.map((s) => {
       const t = TYRE[s.compound] || ['#5A6B85', '#FFFFFF', '?'];
       const laps = Math.max(1, (s.to || total) - (s.from || 1) + 1);
-      return `<div style="flex:${laps};background:${t[0]};color:${t[1]}" class="r-tyre">
-        <b>${t[2]}</b><span>V${s.from || 1}–${s.to || total}</span></div>`;
+      // En stints cortos solo la letra, para que no se corte el texto.
+      const label = laps / total >= 0.22 ? `<span>V${s.from || 1}–${s.to || total}</span>` : '';
+      return `<div style="flex:${laps};background:${t[0]};color:${t[1]}${label ? '' : ';justify-content:center;padding:0'}" class="r-tyre">
+        <b>${t[2]}</b>${label}</div>`;
     }).join('');
     return `<div class="r-label">NEUMÁTICOS</div><div class="r-tyres">${segs}</div>`;
   }
 
-  function render(race, data, header) {
+  function render(race, data, header, opts) {
+    const width = (opts && opts.width) || 920;
     const j = data.j, o = data.o;
     const mine = j && j.results.find((x) => isFranco(x.Driver));
     const pos = posLabel(mine);
@@ -211,10 +214,10 @@
           ${mine && mine.status && !/^\d+$/.test(mine.positionText) ? `<div>${esc(mine.status.toUpperCase())}</div>` : ''}
         </div>
       </div>
-      ${tiles.length ? `<div class="r-tiles" style="grid-template-columns:repeat(${tiles.length},minmax(0,1fr))">
+      ${tiles.length ? `<div class="r-tiles" style="grid-template-columns:repeat(${tiles.length},minmax(0,1fr));--tile-cols:${tiles.length % 3 === 0 || tiles.length === 5 ? 3 : 2}">
         ${tiles.map(([k, v]) => `<div class="r-tile"><div>${k}</div><b>${esc(v)}</b></div>`).join('')}</div>` : ''}
       ${o ? tyres(o.stints, o.totalLaps) : ''}
-      ${o ? chart(o.perLap) : ''}
+      ${o ? chart(o.perLap, width) : ''}
       ${top}`;
   }
 
