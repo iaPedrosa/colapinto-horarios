@@ -33,7 +33,7 @@ for (const r of RACES) if (data.weekend[r.id]) Poster.state.weekend[r.id] = data
 // --- copiar archivos estáticos ---
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(path.join(DIST, 'gp'), { recursive: true });
-for (const f of ['races.js', 'results.js', 'poster.js', 'seo.js', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'icon-512.png', 'manifest.webmanifest', 'og.png']) {
+for (const f of ['races.js', 'results.js', 'poster.js', 'seo.js', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'favicon.ico', 'manifest.webmanifest', 'og.png']) {
   if (fs.existsSync(path.join(ROOT, f))) fs.copyFileSync(path.join(ROOT, f), path.join(DIST, f));
 }
 fs.cpSync(path.join(ROOT, 'data'), path.join(DIST, 'data'), { recursive: true });
