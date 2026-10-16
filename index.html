@@ -14,6 +14,19 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#04142B">
+<script>
+// iPhone, app agregada al inicio: a veces iOS le da a la página una ventana más baja que la pantalla
+// y queda un hueco vacío abajo. En ese caso se estira el html al alto real de la pantalla.
+if (navigator.standalone) {
+  const fullH = () => {
+    const land = innerWidth > innerHeight;
+    const full = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    document.documentElement.style.height = innerHeight < full ? full + 'px' : '';
+  };
+  fullH();
+  addEventListener('resize', fullH);
+}
+</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
