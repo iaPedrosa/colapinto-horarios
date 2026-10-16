@@ -4,7 +4,9 @@ Página web con los horarios **en hora argentina (GMT−3)** de cada Gran Premio
 
 - Al entrar se muestra automáticamente la **próxima carrera**.
 - Con las flechas (o deslizando en el celular, o con ← → del teclado) se navega al resto de los GP.
-- Cada GP tiene su propio link, por ejemplo `.../#las-vegas`.
+- Cada GP tiene su propia página, por ejemplo `/gp/las-vegas` (los links viejos `/#las-vegas` siguen andando). También `/tabla` y `/temporada`.
+- Durante el fin de semana, al lado de cada sesión ya corrida aparece la posición de Franco.
+- En computadora la placa ocupa todo el ancho, en dos columnas; en el celular se ve igual que siempre.
 
 ## Resultados
 
@@ -27,20 +29,26 @@ Los resultados suelen aparecer unas horas después de la carrera. Una vez comple
 
 ## Datos guardados (sin llamar a las APIs en cada visita)
 
-Un proceso de GitHub Actions (`.github/workflows/update-data.yml`) corre `scripts/update-data.mjs`,
-que descarga los datos y los guarda en `data/`:
+La carpeta `data/` es la base de datos: un JSON por GP (`race-*.json`), uno por fin de semana con el
+resultado de Franco en cada sesión (`weekend-*.json`), la tabla (`standings.json`) y la temporada (`season.json`).
 
-- En fin de semana de carrera, cada 30 minutos; el resto de la semana, una vez por día.
-- Un GP terminado y completo se guarda una vez y no se vuelve a pedir.
-- La tabla y la temporada se reescriben solo si cambiaron.
+- `scripts/update-data.mjs` los descarga. Lo corre GitHub Actions (`.github/workflows/update-data.yml`)
+  con un cron (GitHub lo ejecuta cada varias horas, no a horario exacto) y cada vez que `/api/data` lo dispara.
+- Un GP o un fin de semana completo se guarda una vez y no se vuelve a pedir nunca.
+- La página lee primero esos archivos. Si falta uno o quedó viejo (por ejemplo, minutos después de una
+  sesión), pide `/api/data` (función de Vercel, `api/data.js`): consulta las APIs y Vercel guarda la respuesta
+  unos minutos para todos los visitantes. Si encuentra datos nuevos, dispara el workflow para que queden en `data/`.
+  Para eso hace falta la variable `GH_DISPATCH_TOKEN` en Vercel (token de GitHub con permiso *Actions: read and write*
+  sobre este repo). Sin ella todo funciona igual, pero los datos se guardan recién en la próxima corrida del cron.
 
-La página lee primero esos archivos. Si falta alguno o quedó desactualizado (por ejemplo, justo
-después de una carrera), consulta la API directamente.
+## Publicación y Google
 
-## Publicación
+Vercel corre `node scripts/build.mjs` con cada commit (incluidos los de datos) y publica `dist/`:
+una página HTML ya escrita por cada dirección, con título, descripción, datos estructurados (SportsEvent)
+y el texto de abajo de la placa (`seo.js`), más `sitemap.xml`, `robots.txt` y la imagen para compartir `og.png`.
 
-La página está publicada en Vercel, conectado a este repo: cada commit a `main` (incluidos los
-de datos que hace el workflow) se publica solo.
+- El dominio sale de `VERCEL_PROJECT_PRODUCTION_URL` (si se agrega un dominio propio, se usa solo).
+- Para verificar el sitio en Google Search Console por etiqueta HTML: variable `GOOGLE_SITE_VERIFICATION` en Vercel.
 
 ## Actualizar horarios
 

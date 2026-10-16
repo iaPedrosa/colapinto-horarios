@@ -1,0 +1,10 @@
+{
+  "name": "colapinto-horarios",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "data": "node scripts/update-data.mjs"
+  }
+}

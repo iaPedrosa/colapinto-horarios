@@ -81,5 +81,31 @@ RACES.forEach((r) => {
   if (r.days) r.sprint = r.days.some((d) => d.s.some(([n]) => /sprint/i.test(n)));
 });
 
+// Momento exacto (ms) de una sesión: el día del mes se busca hacia atrás desde el domingo.
+function sessionAt(r, dayNum, time) {
+  const [Y, M, D] = r.raceDay.split('-').map(Number);
+  for (let k = 0; k < 5; k++) {
+    const dt = new Date(Date.UTC(Y, M - 1, D - k));
+    if (dt.getUTCDate() === Number(dayNum)) return Date.parse(`${dt.toISOString().slice(0, 10)}T${time}:00-03:00`);
+  }
+  return null;
+}
+// Duración aproximada de cada sesión.
+const sessionDur = (name) => (/^carrera$/i.test(name) ? 2 : 1) * 3600000;
+// Todas las sesiones de un GP con horario (vacío en las fechas ya disputadas sin horarios).
+function sessionsOf(r) {
+  if (!r.days) return [];
+  if (!r._sessions) {
+    r._sessions = [
+      ...r.days.flatMap((d) => d.s.map(([n, t]) => ({ name: n, time: t, day: d.day, dow: d.dow, at: sessionAt(r, d.day, t), key: n + t + d.day }))),
+      { name: 'Carrera', time: r.race.time, day: r.race.day, dow: r.race.dow, at: sessionAt(r, r.race.day, r.race.time), key: 'race' }
+    ];
+  }
+  return r._sessions;
+}
+
 window.RACES = RACES;
+window.sessionAt = sessionAt;
+window.sessionDur = sessionDur;
+window.sessionsOf = sessionsOf;
 })();

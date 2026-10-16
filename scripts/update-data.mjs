@@ -74,6 +74,22 @@ for (const race of RACES) {
   }
 }
 
+// 1b) Resultado de Franco en cada sesión del fin de semana (prácticas, clasificación, sprint).
+for (const race of RACES) {
+  const ss = window.sessionsOf(race);
+  if (!ss.length || ss[0].at > now) continue;                 // sin horarios o todavía no empezó
+  const prev = readJSON('weekend-' + race.id);
+  if (prev && prev.complete) continue;
+  try {
+    const data = await Results.fetchWeekend(race);
+    if (!data || !data.sessions.length) continue;
+    if (writeIfChanged('weekend-' + race.id, data)) changed++;
+    log.push(`${race.id}: ${data.sessions.length} sesiones${data.complete ? ' (completo)' : ''}`);
+  } catch (e) {
+    log.push(`${race.id} sesiones: error (${e.message})`);
+  }
+}
+
 // 2) Tabla del campeonato y 3) temporada de Franco.
 try {
   const st = await Results.fetchStandings();

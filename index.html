@@ -3,18 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Colapinto</title>
+<!--seo: scripts/build.mjs reemplaza este bloque en cada página -->
+<title>Horarios de Colapinto 2026: próxima carrera en hora argentina</title>
+<meta name="description" content="Horarios en hora argentina de cada Gran Premio de Franco Colapinto en la temporada 2026 de Fórmula 1.">
+<!--/seo-->
 <meta name="apple-mobile-web-app-title" content="Colapinto">
 <meta name="application-name" content="Colapinto">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="description" content="Horarios en hora argentina de cada Gran Premio de Franco Colapinto en la temporada 2026 de Fórmula 1.">
+<link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#04142B">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
@@ -44,12 +46,12 @@
 
   /* ---------- escenario ---------- */
   .stage {
-    flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: flex-start;
+    flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center;
     padding: calc(16px + env(safe-area-inset-top)) 16px 0;
     overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     touch-action: pan-y;
   }
-  .frame { position: relative; flex-shrink: 0; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .frame { position: relative; flex-shrink: 0; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
   .poster {
     position: absolute; left: 0; top: 0; width: 1080px; height: 1350px;
     transform-origin: 0 0; overflow: hidden; background: var(--navy);
@@ -277,7 +279,62 @@
   .poster.m .st-row { padding: 9px 16px; }
   .content.st .name { white-space: nowrap; }
 
+  /* ---------- resultado de Franco en cada sesión ---------- */
+  .s-right { display: flex; align-items: center; gap: 18px; }
+  .s-res { background: var(--pink); color: var(--navy); font-weight: 900; font-size: 30px; padding: 2px 12px; transform: skewX(-12deg); }
+  .session.done .s-name, .session.done .s-time { opacity: .4; }
+  .session.done { opacity: 1; }
+  .poster.m .s-res { font-size: 34px; }
+  .race .s-res { background: var(--navy); color: var(--pink); font-size: 40px; }
+
+  /* ---------- columnas: en celular y pantalla angosta no cambian nada ---------- */
+  .hd, .ca, .cb, .full { display: contents; }
+  /* Pantalla ancha (computadora): la placa ocupa todo el ancho, en dos columnas. */
+  .poster.w .content {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 100px;
+    align-items: start; padding: 76px 110px 0;
+  }
+  .poster.w .hd, .poster.w .full { display: block; grid-column: 1 / -1; min-width: 0; }
+  .poster.w .ca { display: block; grid-column: 1; min-width: 0; }
+  .poster.w .cb { display: block; grid-column: 2; min-width: 0; }
+  .poster.w .footer { left: 110px; right: 110px; }
+  .poster.w .r-src { right: 110px; }
+  .poster.w .big43 { font-size: 860px; right: -40px; top: -60px; }
+  .poster.w .name { font-size: 150px; }
+  .poster.w .content.res .name { font-size: 110px; }
+  .poster.w .cb .days { margin-top: 10px; }
+  .poster.w .cb > .r-label:first-child { margin-top: 26px; }
+  .poster.w .r-msg { margin-top: 40px; }
+  .st-cols.three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
+
+  /* ---------- información (texto para leer y para Google) ---------- */
+  .info {
+    width: 100%; max-width: 1100px; padding: 44px 4px calc(56px + env(safe-area-inset-bottom));
+    font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: .01em; color: #D6E6F7;
+    -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+  }
+  .info h1 { margin: 0 0 14px; font-weight: 900; font-style: italic; font-size: 40px; line-height: 1; text-transform: uppercase; color: var(--white); }
+  .info h2 { margin: 36px 0 12px; font-weight: 800; font-size: 22px; letter-spacing: .18em; text-transform: uppercase; color: var(--celeste); }
+  .info p { margin: 0 0 14px; max-width: 820px; }
+  .info b { color: var(--white); font-weight: 800; }
+  .info a { color: var(--white); text-decoration-color: var(--pink); text-underline-offset: 3px; }
+  .info a:hover { color: var(--pink); }
+  .i-table { width: 100%; border-collapse: collapse; font-size: 19px; }
+  .i-table th { text-align: left; font-weight: 700; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--celeste); padding: 8px 10px; }
+  .i-table td { background: var(--card); padding: 8px 10px; border-top: 3px solid #020B18; }
+  .i-table tr.me td { background: var(--pink); color: var(--navy); }
+  .i-table tr.me b, .i-table tr.me a { color: var(--navy); }
+  .i-cal { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }
+  .i-cal li { background: var(--card); padding: 10px 14px; display: flex; flex-direction: column; }
+  .i-cal li[aria-current] { background: var(--card-2); box-shadow: inset 4px 0 var(--pink); }
+  .i-cal span { font-size: 16px; letter-spacing: .06em; color: var(--celeste); }
+  .i-src { margin-top: 30px !important; font-size: 15px; color: #6F8BB0; }
+
   @media (max-width: 480px) {
+    .info { font-size: 18px; }
+    .info h1 { font-size: 32px; }
+    .i-table { font-size: 16px; }
+    .i-table th, .i-table td { padding: 7px 6px; }
     .seg button { padding: 0 10px; font-size: 14px; letter-spacing: .06em; }
     .where-gp { font-size: 18px; }
     .where-meta { font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
@@ -290,6 +347,7 @@
   <div class="frame" id="frame">
     <div class="poster" id="poster" role="img"></div>
   </div>
+  <article class="info" id="info"><!--info--><!--/info--></article>
 </main>
 
 <nav aria-label="Grandes Premios">
@@ -314,25 +372,36 @@
   </div>
 </nav>
 
-<script src="races.js"></script>
-<script src="results.js"></script>
+<script src="/races.js"></script>
+<script src="/results.js"></script>
+<script src="/seo.js"></script>
 <script>
 const RACES = window.RACES;
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clock = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#74ACDF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
+// Resultado de Franco en cada sesión ya corrida del fin de semana (id del GP → datos).
+const weekend = {};
+function sessionRes(r, name) {
+  const w = weekend[r.id];
+  const x = w && w.sessions.find((s) => s.name === name);
+  if (!x) return '';
+  return `<span class="s-res">${x.dsq ? 'DSQ' : x.dns ? 'DNS' : x.dnf ? 'DNF' : 'P' + x.pos}</span>`;
+}
+
 function posterHTML(r) {
   const days = r.days.map((d) => `
     <div class="day">
       <div class="day-badge"><div class="dow">${d.dow}</div><div class="dnum">${d.day}</div></div>
       <div class="sessions">${d.s.map(([n, t]) => `
-        <div class="session${rowState(r, n, t, d.day)}"><div class="s-name">${esc(n)}</div><div class="s-time">${t}</div></div>`).join('')}
+        <div class="session${rowState(r, n, t, d.day)}"><div class="s-name">${esc(n)}</div><div class="s-right">${sessionRes(r, n)}<div class="s-time">${t}</div></div></div>`).join('')}
       </div>
     </div>`).join('');
   return `
     ${backdrop(true)}
     <div class="content">
+      <div class="ca">
       <div class="kicker">FÓRMULA 1 · FECHA ${r.round} · ${esc(r.track.toUpperCase())}</div>
       <div class="name">Franco<br>Colapinto</div>
       <div class="gp-row">
@@ -341,46 +410,28 @@ function posterHTML(r) {
       </div>
       <div class="sub">${clock} HORARIOS DE ARGENTINA (GMT−3) · ${esc(r.sub.toUpperCase())}</div>
       ${countdownHTML(r)}
+      </div>
+      <div class="cb">
       <div class="days${r.compact ? ' compact' : ''}${nextSession(r) ? ' with-cd' : ''}">
         ${days}
         <div class="race">
           <div class="day-badge"><div class="dow">${r.race.dow}</div><div class="dnum">${r.race.day}</div></div>
           <div class="race-body">
             <div><div class="race-kicker">${esc(r.race.kicker.toUpperCase())}</div><div class="race-title">Carrera</div></div>
-            <div class="race-time">${r.race.time}</div>
+            <div class="s-right">${sessionRes(r, 'Carrera')}<div class="race-time">${r.race.time}</div></div>
           </div>
         </div>
+      </div>
       </div>
     </div>
     ${FOOTER}`;
 }
 
 // ---------- cuenta regresiva ----------
-const DUR = (name) => /^carrera$/i.test(name) ? 2 * 3600000 : 3600000;
-function sessionISO(r, dayNum, time) {
-  const [Y, M, D] = r.raceDay.split('-').map(Number);
-  for (let k = 0; k < 5; k++) {
-    const dt = new Date(Date.UTC(Y, M - 1, D - k));
-    if (dt.getUTCDate() === Number(dayNum)) {
-      const ymd = dt.toISOString().slice(0, 10);
-      return Date.parse(`${ymd}T${time}:00-03:00`);
-    }
-  }
-  return null;
-}
-function sessionsOf(r) {
-  if (!r.days) return [];
-  if (!r._sessions) {
-    r._sessions = [
-      ...r.days.flatMap((d) => d.s.map(([n, t]) => ({ name: n, at: sessionISO(r, d.day, t), key: n + t + d.day }))),
-      { name: 'Carrera', at: sessionISO(r, r.race.day, r.race.time), key: 'race' }
-    ];
-  }
-  return r._sessions;
-}
+const DUR = window.sessionDur;
 // La sesión en curso o la próxima de este GP (null si ya terminó todo).
 function nextSession(r, t = Date.now()) {
-  for (const s of sessionsOf(r)) {
+  for (const s of window.sessionsOf(r)) {
     if (s.at == null) continue;
     if (t < s.at) return { ...s, live: false };
     if (t < s.at + DUR(s.name)) return { ...s, live: true };
@@ -388,7 +439,7 @@ function nextSession(r, t = Date.now()) {
   return null;
 }
 function rowState(r, n, t, day) {
-  const at = sessionISO(r, day, t);
+  const at = window.sessionAt(r, day, t);
   if (at == null) return '';
   const now2 = Date.now();
   if (now2 >= at + DUR(n)) return ' done';
@@ -415,15 +466,16 @@ function countdownHTML(r) {
 const FOOTER = '<div class="footer"><div class="vamos">VAMOS FRANCO</div><div class="sign">ARGENTINA · #43</div></div>';
 
 function backdrop(withLines) {
+  const W = posterW;
   return `
     <div class="big43" aria-hidden="true">43</div>
     <div class="stripe" aria-hidden="true">
       <span style="background:#74ACDF"></span><span style="background:#fff"></span><span style="background:#74ACDF"></span>
       <span style="background:#0090FF;flex:1.4"></span><span style="background:#FF87BC"></span>
     </div>
-    ${withLines ? `<svg class="lines" width="1080" height="180" viewBox="0 1060 1080 180" aria-hidden="true">
-      <path d="M -40 1180 L 380 1180 L 470 1090 L 1120 1090" fill="none" stroke="#0090FF" stroke-width="10"/>
-      <path d="M -40 1214 L 396 1214 L 486 1124 L 1120 1124" fill="none" stroke="#FF87BC" stroke-width="10"/>
+    ${withLines ? `<svg class="lines" width="${W}" height="180" viewBox="0 1060 ${W} 180" aria-hidden="true">
+      <path d="M -40 1180 L 380 1180 L 470 1090 L ${W + 40} 1090" fill="none" stroke="#0090FF" stroke-width="10"/>
+      <path d="M -40 1214 L 396 1214 L 486 1124 L ${W + 40} 1124" fill="none" stroke="#FF87BC" stroke-width="10"/>
     </svg>` : ''}`;
 }
 
@@ -441,9 +493,10 @@ function resultsShell(r, inner, withSource) {
   return `${backdrop(false)}<div class="content res">${inner}</div>
     ${withSource ? '<div class="r-src">DATOS: JOLPICA-F1 · OPENF1</div>' : ''}${FOOTER}`;
 }
+const msgBlock = (title, text) => `<div class="ca"><div class="r-msg"><b>${title}</b>${text ? `<span>${text}</span>` : ''}</div></div>`;
 
 function messageHTML(r, title, text) {
-  return resultsShell(r, `${resultsHead(r)}<div class="r-msg"><b>${title}</b><span>${text}</span></div>`, false);
+  return resultsShell(r, `<div class="hd">${resultsHead(r)}</div>${msgBlock(title, text)}`, false);
 }
 
 const $ = (id) => document.getElementById(id);
@@ -457,15 +510,21 @@ let idx = upcomingIdx;
 
 $('dots').innerHTML = RACES.map(() => '<span></span>').join('');
 
-// En pantallas angostas y altas (celular) la placa pasa a 720 px de ancho y se estira
-// a lo alto para llenar la pantalla: todo se ve más grande.
-let mobile = null;
+// Tres formatos de placa:
+//   'm' celular (angosto y alto): 720 de ancho, estirada a lo alto para llenar la pantalla.
+//   'd' pantalla angosta: la placa original de 1080 × 1350.
+//   'w' computadora: la placa toma el ancho de la pantalla y se arma en dos columnas.
+let mode = null;
 let posterW = 1080, baseH = 1350, scale = 1;
+const PAD_W = 110, GAP_W = 100;
+const mobile = () => mode === 'm';
+// Ancho útil para los gráficos: el de una columna en pantalla ancha.
+const contentW = () => mode === 'w' ? (posterW - 2 * PAD_W - GAP_W) / 2 : posterW - (mode === 'm' ? 80 : 160);
 // Si el contenido no entra en la placa, la placa crece hacia abajo y se puede scrollear.
 function relayout() {
   const c = poster.querySelector('.content');
   // Con las líneas decorativas (placa de horarios) hace falta más aire abajo.
-  const extra = poster.querySelector('.lines') ? (mobile ? 300 : 300) : (mobile ? 150 : 170);
+  const extra = poster.querySelector('.lines') ? 300 : (mobile() ? 150 : 170);
   const need = c ? Math.ceil(c.offsetTop + c.offsetHeight + extra) : 0;
   const H = Math.max(baseH, need);
   poster.style.height = H + 'px';
@@ -475,25 +534,31 @@ function paint(html) { poster.innerHTML = html; relayout(); }
 function fit() {
   const cs = getComputedStyle(stage);
   const w = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const h = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const h = stage.clientHeight - parseFloat(cs.paddingTop);
   const tallH = h / (w / 720);
-  const isMobile = w < 700 && tallH >= 1300;
-  const W = isMobile ? 720 : 1080;
-  const H = isMobile ? Math.min(1800, Math.floor(tallH)) : 1350;
-  const s = Math.max(0.1, Math.min(w / W, h / H));
+  const m = w < 700 && tallH >= 1300 ? 'm' : (w >= 1000 && w / h > 1.15) ? 'w' : 'd';
+  let W, H, s;
+  if (m === 'w') {
+    W = Math.round(Math.min(2500, Math.max(1700, 1150 * w / h)));
+    s = w / W;
+    H = Math.max(1000, Math.floor(h / s));
+  } else {
+    W = m === 'm' ? 720 : 1080;
+    H = m === 'm' ? Math.min(1800, Math.floor(tallH)) : 1350;
+    s = Math.max(0.1, Math.min(w / W, h / H));
+  }
   poster.style.width = W + 'px';
   poster.style.height = H + 'px';
   frame.style.width = W * s + 'px';
   frame.style.height = H * s + 'px';
   poster.style.transform = `scale(${s})`;
-  posterW = W; baseH = H; scale = s;
+  const changed = m !== mode || W !== posterW;
+  const first = mode === null;
+  posterW = W; baseH = H; scale = s; mode = m;
+  poster.classList.toggle('m', m === 'm');
+  poster.classList.toggle('w', m === 'w');
   relayout();
-  if (mobile !== isMobile) {
-    const first = mobile === null;
-    mobile = isMobile;
-    poster.classList.toggle('m', isMobile);
-    if (!first) show(idx, false);   // el gráfico depende del ancho
-  }
+  if (changed && !first) show(idx, false);   // el diseño depende del ancho
 }
 
 function status(i) {
@@ -503,12 +568,41 @@ function status(i) {
 }
 
 const finished = (r) => Date.parse(r.end) <= now;
-let view = 'gp';        // 'gp' (resultados si terminó, si no horarios), 'schedule' o 'standings'
+let view = 'gp';        // 'gp' (resultados si terminó, si no horarios), 'schedule', 'standings' o 'season'
 let token = 0;          // evita que una respuesta lenta pise otro GP
+
+// ---------- direcciones: /, /gp/<id>, /tabla, /temporada ----------
+let home = false;       // en "/" se ve la próxima carrera
+function route() {
+  const p = location.pathname.replace(/\.html$/, '').replace(/\/+$/, '');
+  const gp = /^\/gp\/([a-z0-9-]+)$/.exec(p);
+  const byHash = RACES.findIndex((r) => '#' + r.id === location.hash);   // links viejos (#las-vegas)
+  if (gp && RACES.some((r) => r.id === gp[1])) return { idx: RACES.findIndex((r) => r.id === gp[1]), view: 'gp' };
+  if (p === '/tabla') return { idx: upcomingIdx, view: 'standings' };
+  if (p === '/temporada') return { idx: upcomingIdx, view: 'season' };
+  if (byHash !== -1) return { idx: byHash, view: 'gp' };
+  return { idx: upcomingIdx, view: 'gp', home: true };
+}
+const pathOf = () => view === 'standings' ? '/tabla' : view === 'season' ? '/temporada' : home ? '/' : '/gp/' + RACES[idx].id;
+
+// ---------- información debajo de la placa (también la lee Google) ----------
+const info = { race: {}, weekend, standings: null, season: null };
+function renderInfo() {
+  const r = RACES[idx];
+  const kind = view === 'standings' ? 'tabla' : view === 'season' ? 'temporada' : home ? 'home' : 'gp';
+  const p = window.Seo.page(kind, r, { race: info.race[r.id], weekend: weekend[r.id], standings: info.standings, season: info.season });
+  $('info').innerHTML = window.Seo.section(p);
+  document.title = p.title;
+  const d = document.querySelector('meta[name="description"]');
+  if (d) d.setAttribute('content', p.description);
+  const c = document.querySelector('link[rel="canonical"]');
+  if (c) c.setAttribute('href', new URL(p.path, c.href).href);
+}
 
 function setView(v) {
   view = v;
-  show(idx, false);
+  home = false;
+  show(idx, true);
 }
 $('segRes').addEventListener('click', () => setView('gp'));
 $('segSch').addEventListener('click', () => setView('schedule'));
@@ -518,28 +612,29 @@ $('segSea').addEventListener('click', () => setView('season'));
 function renderSeason() {
   const my = ++token;
   poster.setAttribute('aria-label', 'Temporada 2026 de Franco Colapinto y duelo con su compañero de equipo.');
-  const head = (round) => `
+  const head = (round) => `<div class="hd">
     <div class="kicker">FÓRMULA 1 · TEMPORADA 2026${round ? ' · TRAS LA FECHA ' + round : ''}</div>
     <div class="name">Franco Colapinto</div>
-    <div class="gp-row"><div class="gp-tag">SU TEMPORADA</div></div>`;
+    <div class="gp-row"><div class="gp-tag">SU TEMPORADA</div></div></div>`;
   const shell = (inner, src) => `${backdrop(false)}<div class="content res">${inner}</div>
     ${src ? '<div class="r-src">DATOS: JOLPICA-F1</div>' : ''}${FOOTER}`;
-  paint(shell(`${head()}<div class="r-msg"><b>Cargando<br>temporada…</b></div>`));
+  paint(shell(`${head()}${msgBlock('Cargando<br>temporada…')}`));
   window.Results.loadSeason().then((d) => {
     if (my !== token) return;
-    if (!d) { paint(shell(`${head()}<div class="r-msg"><b>Datos no<br>disponibles</b><span>Probá de nuevo en un rato.</span></div>`)); return; }
-    paint(shell(head(d.round) + window.Results.renderSeason(d, { width: posterW - (mobile ? 80 : 160) }), true));
+    if (!d) { paint(shell(`${head()}${msgBlock('Datos no<br>disponibles', 'Probá de nuevo en un rato.')}`)); return; }
+    info.season = d; renderInfo();
+    paint(shell(head(d.round) + window.Results.renderSeason(d, { width: contentW() }), true));
   }).catch(() => {
     if (my !== token) return;
-    paint(shell(`${head()}<div class="r-msg"><b>Sin conexión<br>con los datos</b><span>Probá de nuevo en un rato.</span></div>`));
+    paint(shell(`${head()}${msgBlock('Sin conexión<br>con los datos', 'Probá de nuevo en un rato.')}`));
   });
 }
 
 function standingsHead(round) {
-  return `
+  return `<div class="hd">
     <div class="kicker">FÓRMULA 1 · TEMPORADA 2026${round ? ' · TRAS LA FECHA ' + round : ''}</div>
     <div class="name">Campeonato</div>
-    <div class="gp-row"><div class="gp-tag">PILOTOS Y CONSTRUCTORES</div></div>`;
+    <div class="gp-row"><div class="gp-tag">PILOTOS Y CONSTRUCTORES</div></div></div>`;
 }
 
 function renderStandings() {
@@ -547,20 +642,33 @@ function renderStandings() {
   poster.setAttribute('aria-label', 'Campeonato de pilotos y de constructores 2026.');
   const shell = (inner, src) => `${backdrop(false)}<div class="content res st">${inner}</div>
     ${src ? '<div class="r-src">DATOS: JOLPICA-F1</div>' : ''}${FOOTER}`;
-  paint(shell(`${standingsHead()}<div class="r-msg"><b>Cargando<br>tabla…</b></div>`));
+  paint(shell(`${standingsHead()}${msgBlock('Cargando<br>tabla…')}`));
   window.Results.loadStandings().then((d) => {
     if (my !== token) return;
-    if (!d) { paint(shell(`${standingsHead()}<div class="r-msg"><b>Tabla no<br>disponible</b><span>Probá de nuevo en un rato.</span></div>`)); return; }
-    paint(shell(standingsHead(d.round) + window.Results.renderStandings(d, { twoCols: !mobile }), true));
+    if (!d) { paint(shell(`${standingsHead()}${msgBlock('Tabla no<br>disponible', 'Probá de nuevo en un rato.')}`)); return; }
+    info.standings = d; renderInfo();
+    paint(shell(standingsHead(d.round) + `<div class="full">${window.Results.renderStandings(d, { twoCols: !mobile(), wide: mode === 'w' })}</div>`, true));
   }).catch(() => {
     if (my !== token) return;
-    paint(shell(`${standingsHead()}<div class="r-msg"><b>Sin conexión<br>con los datos</b><span>Probá de nuevo en un rato.</span></div>`));
+    paint(shell(`${standingsHead()}${msgBlock('Sin conexión<br>con los datos', 'Probá de nuevo en un rato.')}`));
   });
 }
 
 function renderSchedule(r) {
   paint(posterHTML(r));
   poster.setAttribute('aria-label', `${r.gp}: horarios en hora argentina. Carrera el ${r.race.dow} ${r.race.day} a las ${r.race.time}.`);
+}
+// Trae el resultado de Franco en las sesiones ya corridas y, si cambió, vuelve a dibujar.
+function refreshWeekend(r) {
+  const ss = window.sessionsOf(r);
+  if (!ss.length || ss[0].at > Date.now()) return;
+  window.Results.loadWeekend(r).then((w) => {
+    if (!w || JSON.stringify(w) === JSON.stringify(weekend[r.id])) return;
+    weekend[r.id] = w;
+    if (RACES[idx] !== r) return;
+    renderInfo();
+    if (poster.querySelector('.days')) { const y = stage.scrollTop; renderSchedule(r); stage.scrollTop = y; }
+  }).catch(() => {});
 }
 
 function renderResults(r) {
@@ -574,7 +682,8 @@ function renderResults(r) {
         'Los datos oficiales suelen aparecer unas horas después de la bandera a cuadros. Volvé a entrar más tarde.'));
       return;
     }
-    paint(resultsShell(r, window.Results.render(r, data, resultsHead(r), { width: posterW - (mobile ? 80 : 160) }), true));
+    info.race[r.id] = data; renderInfo();
+    paint(resultsShell(r, window.Results.render(r, data, resultsHead(r), { width: contentW(), chartH: mode === 'w' ? 230 : 0 }), true));
   }).catch(() => {
     if (my !== token) return;
     paint(messageHTML(r, 'Sin conexión<br>con los datos', 'No pudimos cargar los resultados. Probá de nuevo en un rato.'));
@@ -587,26 +696,28 @@ function show(i, push) {
   const r = RACES[idx];
   const done = finished(r);
   if (view === 'schedule' && !r.days) view = 'gp';
-  const mode = (view === 'standings' || view === 'season') ? view : (done && view === 'gp') ? 'results' : 'schedule';
+  const mode2 = (view === 'standings' || view === 'season') ? view : (done && view === 'gp') ? 'results' : 'schedule';
   $('segRes').hidden = !done;
   $('segSch').hidden = !r.days;
-  $('segRes').setAttribute('aria-pressed', String(mode === 'results'));
-  $('segSch').setAttribute('aria-pressed', String(mode === 'schedule'));
-  $('segTab').setAttribute('aria-pressed', String(mode === 'standings'));
-  $('segSea').setAttribute('aria-pressed', String(mode === 'season'));
-  if (mode === 'standings') renderStandings();
-  else if (mode === 'season') renderSeason();
-  else if (mode === 'results') renderResults(r);
+  $('segRes').setAttribute('aria-pressed', String(mode2 === 'results'));
+  $('segSch').setAttribute('aria-pressed', String(mode2 === 'schedule'));
+  $('segTab').setAttribute('aria-pressed', String(mode2 === 'standings'));
+  $('segSea').setAttribute('aria-pressed', String(mode2 === 'season'));
+  if (mode2 === 'standings') renderStandings();
+  else if (mode2 === 'season') renderSeason();
+  else if (mode2 === 'results') renderResults(r);
   else { token++; renderSchedule(r); }
+  if (r.days) refreshWeekend(r);
   $('whereGp').textContent = r.gp;
   $('whereMeta').innerHTML = `FECHA ${r.round} DE 23 · ${status(idx).toUpperCase()}`;
   [...$('dots').children].forEach((d, k) => d.classList.toggle('on', k === idx));
   $('prev').disabled = idx === 0;
   $('next').disabled = idx === RACES.length - 1;
-  if (push) history.replaceState(null, '', '#' + r.id);
+  if (push && location.pathname + location.hash !== pathOf()) history.replaceState(null, '', pathOf());
+  renderInfo();
 }
 
-function go(i) { if (view === 'standings' || view === 'season') view = 'gp'; show(i, true); }
+function go(i) { if (view === 'standings' || view === 'season') view = 'gp'; home = false; show(i, true); }
 $('prev').addEventListener('click', () => go(idx - 1));
 $('next').addEventListener('click', () => go(idx + 1));
 document.addEventListener('keydown', (e) => {
@@ -633,7 +744,11 @@ document.addEventListener('dblclick', (e) => e.preventDefault());
 
 let x0 = null;
 let y0 = null;
-stage.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+stage.addEventListener('touchstart', (e) => {
+  // En el texto de abajo no se cambia de carrera deslizando.
+  if (e.target.closest('.info')) { x0 = null; return; }
+  x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+}, { passive: true });
 stage.addEventListener('touchend', (e) => {
   if (x0 === null) return;
   const dx = e.changedTouches[0].clientX - x0;
@@ -643,13 +758,17 @@ stage.addEventListener('touchend', (e) => {
   x0 = null;
 });
 
-const fromHash = RACES.findIndex((r) => '#' + r.id === location.hash);
+const start = route();
+view = start.view; home = !!start.home;
 fit();
-show(fromHash === -1 ? upcomingIdx : fromHash, false);
-window.addEventListener('resize', fit);
+show(start.idx, !!location.hash);
+// La temporada completa el calendario de abajo con el resultado de cada fecha.
+window.Results.loadSeason().then((d) => { if (d) { info.season = d; renderInfo(); } }).catch(() => {});
+let resizeT = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(fit, 120); });
 window.addEventListener('hashchange', () => {
   const i = RACES.findIndex((r) => '#' + r.id === location.hash);
-  if (i !== -1 && i !== idx) go(i);
+  if (i !== -1) go(i);
 });
 setInterval(() => {
   const el = poster.querySelector('.cd');
@@ -657,9 +776,14 @@ setInterval(() => {
   const r = RACES[idx];
   const nx = nextSession(r);
   const key = nx ? nx.key + (nx.live ? '-live' : '') : '';
-  if (key !== el.getAttribute('data-key')) { const y = stage.scrollTop; renderSchedule(r); stage.scrollTop = y; return; }
+  if (key !== el.getAttribute('data-key')) { const y = stage.scrollTop; renderSchedule(r); stage.scrollTop = y; refreshWeekend(r); return; }
   if (!nx.live) $('cdTime').textContent = fmtLeft(nx.at - Date.now());
 }, 1000);
+// Durante el fin de semana, cada 3 minutos se fija si ya está el resultado de la última sesión.
+setInterval(() => {
+  const r = RACES[idx];
+  if (r.days && window.Results.inWeekend(r)) refreshWeekend(r);
+}, 180000);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
 </script>
 </body>

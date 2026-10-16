@@ -4,15 +4,17 @@
 //   - OpenF1 (datos históricos): vueltas, velocidad, neumáticos, paradas y posición vuelta a vuelta.
 //
 // Para no consultar las APIs en cada visita, un proceso de GitHub (scripts/update-data.mjs)
-// guarda los datos en la carpeta data/. La página lee primero esos archivos y solo
-// va a la API si falta el archivo o quedó desactualizado.
+// guarda los datos en la carpeta data/. La página lee primero esos archivos; si falta alguno
+// o quedó desactualizado (recién terminada una sesión) pide /api/data, que consulta las APIs
+// con caché compartido en Vercel. Solo como último recurso va directo a las APIs.
 (function () {
   const API = (typeof window !== 'undefined' && window.F1_API) || {};
   const JOLPICA = API.jolpica || 'https://api.jolpi.ca/ergast/f1';
   const OPENF1 = API.openf1 || 'https://api.openf1.org/v1';
   const NUM = 43;
-  const CACHE_V = 'r1';
+  const CACHE_V = 'r2';   // r1 podía tener carreras guardadas como completas sin estarlo
 
+  const dayMs = 86400000;
   const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   async function getJSON(url) {
@@ -31,12 +33,30 @@
   // Archivo guardado en data/ (null si no existe o no se pudo leer).
   async function getStatic(name) {
     try {
-      const res = await fetch(`data/${name}.json`, { cache: 'no-cache' });
+      const res = await fetch(`/data/${name}.json`, { cache: 'no-cache' });
+      return res.ok ? await res.json() : null;
+    } catch (e) { return null; }
+  }
+  // Datos frescos desde la función de Vercel (null si no responde).
+  async function getLive(name) {
+    try {
+      const res = await fetch(`/api/data?f=${encodeURIComponent(name)}`);
       return res.ok ? await res.json() : null;
     } catch (e) { return null; }
   }
 
-  const dayMs = 86400000;
+  // ¿Terminó hace menos de 2 días una sesión que da puntos (sprint o carrera)?
+  // En ese lapso la tabla puede haber cambiado y el archivo guardado todavía no.
+  function pointsJustScored(t = Date.now()) {
+    for (const r of (window.RACES || [])) {
+      const ends = window.sessionsOf(r).filter((x) => /^(carrera|carrera sprint)$/i.test(x.name))
+        .map((x) => x.at + window.sessionDur(x.name));
+      if (!ends.length) ends.push(Date.parse(r.end));
+      if (ends.some((e) => t > e && t - e < 2 * dayMs)) return true;
+    }
+    return false;
+  }
+
   // Último GP que ya terminó (con 2 h de margen para que se publiquen los datos).
   function lastFinishedRace() {
     const t = Date.now();
@@ -108,6 +128,8 @@
     ]);
     const val = (p) => (p.status === 'fulfilled' && Array.isArray(p.value) ? p.value : []);
     const L = val(laps), S = val(stints), P = val(pits), POS = val(pos);
+    // Si falló algún pedido (por ejemplo por el límite de la API) el dato queda parcial.
+    const failed = [laps, stints, pits, pos].filter((p) => p.status !== 'fulfilled').length;
     if (!L.length && !S.length && !POS.length) return null;
 
     const times = L.map((l) => l.lap_duration).filter((x) => typeof x === 'number' && x > 0);
@@ -137,7 +159,8 @@
       stints: S.slice().sort((a, b) => a.stint_number - b.stint_number)
         .map((x) => ({ compound: (x.compound || '').toUpperCase(), from: x.lap_start, to: x.lap_end })),
       stops: P.length,
-      perLap
+      perLap,
+      failed
     };
   }
 
@@ -149,20 +172,70 @@
       o: o.status === 'fulfilled' ? o.value : null
     };
     if (!data.j && !data.o) return null;
-    data.complete = !!(data.j && data.o);
+    data.complete = isComplete(data);
     return data;
   }
+  function isComplete(d) {
+    const o = d && d.o;
+    if (!d || !d.j || !o || o.failed) return false;
+    // Varios juegos de neumáticos sin paradas, o sin vuelta a vuelta: faltan datos.
+    if (o.stints.length > 1 && !o.stops) return false;
+    return o.perLap.length >= 2;
+  }
 
-  // En la página: navegador → archivo guardado → API.
+  // En la página: archivo guardado → copia del navegador → /api/data → API directa.
+  // El archivo manda: así un dato malo guardado en el navegador no tapa uno bueno.
   async function load(race) {
-    const cached = cacheGet(race.id);
-    if (cached && cached.complete) return cached;
     const saved = await getStatic('race-' + race.id);
     if (saved && saved.complete) { cacheSet(race.id, saved); return saved; }
-    const data = await fetchRace(race);
-    if (!data && saved) return saved;
+    const cached = cacheGet(race.id);
+    if (cached && isComplete(cached)) return cached;
+    let data = await getLive('race-' + race.id);
+    if (!data) data = await fetchRace(race).catch(() => null);
     if (data && data.complete) cacheSet(race.id, data);
-    return data;
+    return data || saved || cached;
+  }
+
+  // ---------- resultado de Franco en cada sesión del fin de semana ----------
+  const SESSION_ES = {
+    'Practice 1': 'Práctica Libre 1', 'Practice 2': 'Práctica Libre 2', 'Practice 3': 'Práctica Libre 3',
+    'Sprint Qualifying': 'Clasificación Sprint', 'Sprint Shootout': 'Clasificación Sprint',
+    'Sprint': 'Carrera Sprint', 'Qualifying': 'Clasificación', 'Race': 'Carrera'
+  };
+  async function fetchWeekend(race) {
+    const ss = window.sessionsOf(race);
+    if (!ss.length) return null;
+    const first = Math.min(...ss.map((x) => x.at));
+    const from = new Date(first - dayMs).toISOString().slice(0, 10);
+    const to = new Date(Date.parse(race.raceDay + 'T00:00:00-03:00') + 2 * dayMs).toISOString().slice(0, 10);
+    const list = await getJSON(`${OPENF1}/sessions?year=2026&date_start%3E%3D${from}&date_start%3C${to}`);
+    if (!Array.isArray(list) || !list.length) return null;
+    list.sort((a, b) => Date.parse(a.date_start) - Date.parse(b.date_start));
+    const sessions = [];
+    let pending = 0;
+    for (const s of list) {
+      const name = SESSION_ES[s.session_name];
+      if (!name || s.is_cancelled) continue;
+      if (Date.parse(s.date_end) > Date.now()) { pending++; continue; }
+      let x = null;
+      try { x = (await getJSON(`${OPENF1}/session_result?session_key=${s.session_key}&driver_number=${NUM}`))[0]; } catch (e) { /* todavía no está */ }
+      if (!x || (x.position == null && !x.dnf && !x.dns && !x.dsq)) { pending++; continue; }
+      sessions.push({ name, end: s.date_end, pos: x.position, dnf: !!x.dnf, dns: !!x.dns, dsq: !!x.dsq });
+    }
+    return { id: race.id, sessions, complete: pending === 0 && sessions.length > 0 };
+  }
+
+  // Ventana del fin de semana: desde la primera sesión hasta 2 días después de la carrera.
+  function inWeekend(race, t = Date.now()) {
+    const ss = window.sessionsOf(race);
+    if (!ss.length) return false;
+    return t >= Math.min(...ss.map((x) => x.at)) && t < Date.parse(race.end) + 2 * dayMs;
+  }
+  async function loadWeekend(race) {
+    if (!window.sessionsOf(race).length) return null;
+    const saved = await getStatic('weekend-' + race.id);
+    if ((saved && saved.complete) || !inWeekend(race)) return saved;
+    return (await getLive('weekend-' + race.id)) || saved;
   }
 
   // ---------- presentación ----------
@@ -178,14 +251,18 @@
     if (r.positionText === 'D') return 'DSQ';
     return 'DNF';
   };
+  const STATUS_ES = { retired: 'ABANDONO', accident: 'ACCIDENTE', collision: 'CHOQUE', 'collision damage': 'DAÑO POR CHOQUE',
+    disqualified: 'DESCALIFICADO', 'did not start': 'NO LARGÓ', engine: 'MOTOR', gearbox: 'CAJA DE CAMBIOS', hydraulics: 'HIDRÁULICA',
+    brakes: 'FRENOS', suspension: 'SUSPENSIÓN', 'power unit': 'UNIDAD DE POTENCIA', electrical: 'ELÉCTRICO', puncture: 'PINCHAZO', withdrew: 'SE RETIRÓ' };
+  const statusEs = (s) => STATUS_ES[String(s).toLowerCase()] || String(s).toUpperCase();
   const TYRE = {
     SOFT: ['#E8002D', '#FFFFFF', 'S'], MEDIUM: ['#FFD12E', '#04142B', 'M'], HARD: ['#EDEDED', '#04142B', 'H'],
     INTERMEDIATE: ['#43B02A', '#FFFFFF', 'I'], WET: ['#0067FF', '#FFFFFF', 'W']
   };
 
-  function chart(perLap, W) {
+  function chart(perLap, W, h) {
     if (!perLap || perLap.length < 2) return '';
-    const H = W < 800 ? 190 : 140, padL = 44, padR = 16, padT = 14, padB = 26;
+    const H = h || (W < 800 ? 190 : 140), padL = 44, padR = 16, padT = 14, padB = 26;
     const maxP = Math.max(22, ...perLap);
     const x = (i) => padL + (i / (perLap.length - 1)) * (W - padL - padR);
     const y = (p) => padT + ((p - 1) / (maxP - 1)) * (H - padT - padB);
@@ -249,20 +326,20 @@
       top = `<div class="r-label">TOP 10</div><div class="r-top">${ten}${extra}</div>`;
     }
 
-    return `${header}
+    return `<div class="hd">${header}</div><div class="ca">
       <div class="r-hero">
         <div class="r-pos">${pos}</div>
         <div class="r-hero-side">
           ${grid ? `<div>LARGÓ <b>${grid}</b>${gainTxt ? ` · ${gainTxt}` : ''}</div>` : ''}
           ${pts != null ? `<div class="r-pts">${pts} ${pts === 1 ? 'PUNTO' : 'PUNTOS'}</div>` : ''}
-          ${mine && mine.status && !/^\d+$/.test(mine.positionText) ? `<div>${esc(mine.status.toUpperCase())}</div>` : ''}
+          ${mine && mine.status && !/^\d+$/.test(mine.positionText) ? `<div>${esc(statusEs(mine.status))}</div>` : ''}
         </div>
       </div>
       ${tiles.length ? `<div class="r-tiles" style="grid-template-columns:repeat(${tiles.length},minmax(0,1fr));--tile-cols:${tiles.length % 3 === 0 || tiles.length === 5 ? 3 : 2}">
         ${tiles.map(([k, v]) => `<div class="r-tile"><div>${k}</div><b>${esc(v)}</b></div>`).join('')}</div>` : ''}
-      ${o ? tyres(o.stints, o.totalLaps) : ''}
-      ${o ? chart(o.perLap, width) : ''}
-      ${top}`;
+      ${o ? tyres(o.stints, o.totalLaps) : ''}</div>
+      <div class="cb">${o ? chart(o.perLap, width, opts && opts.chartH) : ''}
+      ${top}</div>`;
   }
 
   // ---------- tabla del campeonato ----------
@@ -295,28 +372,29 @@
     };
   }
 
-  // Navegador (1 h) → archivo guardado si está al día → API → archivo aunque esté viejo.
+  // Navegador → archivo guardado si está al día → /api/data → API directa → archivo aunque esté viejo.
+  // Recién terminada una sprint o carrera se saltea el archivo y el navegador guarda solo 10 minutos.
   async function cachedOrFetch(key, fileName, fetcher) {
+    const fresh = pointsJustScored();
     const c = cacheGet(key);
-    if (c && Date.now() - c.at < 3600000 && upToDate(c.data)) return c.data;
+    if (c && Date.now() - c.at < (fresh ? 600000 : 3600000) && upToDate(c.data)) return c.data;
     const saved = await getStatic(fileName);
-    if (saved && upToDate(saved)) { cacheSet(key, { at: Date.now(), data: saved }); return saved; }
-    try {
-      const data = await fetcher();
-      if (data) { cacheSet(key, { at: Date.now(), data }); return data; }
-    } catch (e) {
-      if (!saved) throw e;
+    if (saved && upToDate(saved) && !fresh) { cacheSet(key, { at: Date.now(), data: saved }); return saved; }
+    let data = await getLive(fileName);
+    if (!data) {
+      try { data = await fetcher(); } catch (e) { if (!saved) throw e; }
     }
+    if (data) { cacheSet(key, { at: Date.now(), data }); return data; }
     return saved;
   }
 
-  const loadStandings = () => cachedOrFetch('standings3', 'standings', fetchStandings);
+  const loadStandings = () => cachedOrFetch('standings', 'standings', fetchStandings);
 
   const teamName = (n) => String(n || '').replace(/\s+F1 Team$/i, '');
 
-  function standingsList(rows, title, kind) {
+  function standingsList(rows, title, kind, maxPts) {
     if (!rows.length) return '';
-    const max = Math.max(1, ...rows.map((r) => r.pts));
+    const max = maxPts || Math.max(1, ...rows.map((r) => r.pts));
     const items = rows.map((r) => `
       <div class="st-row${r.me ? (kind === 'teams' ? ' team' : ' me') : ''}">
         <div class="st-bar" style="width:${((r.pts / max) * 100).toFixed(1)}%"></div>
@@ -329,6 +407,16 @@
 
   function renderStandings(d, opts) {
     const two = opts && opts.twoCols;
+    if (opts && opts.wide) {
+      // Pantalla ancha: los pilotos en dos columnas y los constructores en la tercera.
+      const half = Math.ceil(d.drivers.length / 2);
+      const max = Math.max(1, ...d.drivers.map((r) => r.pts));
+      return `<div class="st-cols three">
+        ${standingsList(d.drivers.slice(0, half), 'PILOTOS', 'drivers', max)}
+        ${standingsList(d.drivers.slice(half), '&nbsp;', 'drivers', max)}
+        ${standingsList(d.teams, 'CONSTRUCTORES', 'teams')}
+      </div>`;
+    }
     return `<div class="st-cols${two ? ' two' : ''}">
       ${standingsList(d.drivers, 'PILOTOS', 'drivers')}
       ${standingsList(d.teams, 'CONSTRUCTORES', 'teams')}
@@ -376,7 +464,7 @@
       me: me || { last: 'Colapinto' }, mate: mate || { last: 'Gasly' }, a, b };
   }
 
-  const loadSeason = () => cachedOrFetch('season2', 'season', () => fetchSeason());
+  const loadSeason = () => cachedOrFetch('season', 'season', () => fetchSeason());
 
   function cumulative(d) {
     const rounds = [...new Set([...Object.keys(d.races), ...Object.keys(d.sprint)].map(Number))].sort((x, y) => x - y);
@@ -462,10 +550,10 @@
       <div class="sz-chip${r.points > 0 ? ' pts' : ''}${r.pos == null ? ' out' : ''}">
         <span>F${r.round}</span><b>${r.pos != null ? 'P' + r.pos : 'DNF'}</b></div>`).join('');
 
-    return `
+    return `<div class="ca">
       <div class="r-tiles sz-tiles">${tiles.map(([k, v]) => `<div class="r-tile"><div>${k}</div><b>${esc(v)}</b></div>`).join('')}</div>
-      ${pointsChart(ca, cb, W, d.me.last || 'Colapinto', d.mate.last || 'Gasly')}
-      <div class="r-label">DUELO EN ALPINE · <span style="color:#FF87BC">${esc((d.me.last || 'Colapinto').toUpperCase())}</span> VS <span style="color:#74ACDF">${esc((d.mate.last || 'Gasly').toUpperCase())}</span></div>
+      ${pointsChart(ca, cb, W, d.me.last || 'Colapinto', d.mate.last || 'Gasly')}</div>
+      <div class="cb"><div class="r-label">DUELO EN ALPINE · <span style="color:#FF87BC">${esc((d.me.last || 'Colapinto').toUpperCase())}</span> VS <span style="color:#74ACDF">${esc((d.mate.last || 'Gasly').toUpperCase())}</span></div>
       <div class="du">${duel}</div>
       <div class="r-label">CARRERA A CARRERA</div>
       <div class="sz-legend">
@@ -473,12 +561,12 @@
         <span><i></i>SIN PUNTOS</span>
         <span><i class="out"></i>ABANDONO</span>
       </div>
-      <div class="sz-chips">${chips}</div>`;
+      <div class="sz-chips">${chips}</div></div>`;
   }
 
   window.Results = {
-    load, render, loadStandings, renderStandings, loadSeason, renderSeason,
-    // usados por scripts/update-data.mjs
-    fetchRace, fetchStandings, fetchSeason
+    load, render, loadStandings, renderStandings, loadSeason, renderSeason, loadWeekend, inWeekend, isComplete,
+    // usados por scripts/update-data.mjs y api/data.js
+    fetchRace, fetchStandings, fetchSeason, fetchWeekend
   };
 })();
