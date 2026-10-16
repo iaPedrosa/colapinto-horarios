@@ -14,25 +14,7 @@
   "headers": [
     {
       "source": "/(.*)\\.(png|svg)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=604800"
-        }
-      ]
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "colapinto-horarios.vercel.app"
-        }
-      ],
-      "destination": "https://www.horarioscolapinto.com.ar/:path*",
-      "permanent": true
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
     }
   ]
 }
