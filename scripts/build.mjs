@@ -16,8 +16,10 @@ const SITE = 'https://' + (process.env.SITE_DOMAIN || process.env.VERCEL_PROJECT
 // --- el mismo código que usa la página ---
 const ctx = vm.createContext({ console });
 ctx.window = ctx;
-for (const f of ['races.js', 'results.js', 'seo.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
-const { RACES, Seo } = ctx;
+for (const f of ['races.js', 'results.js', 'poster.js', 'seo.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+const { RACES, Seo, Poster } = ctx;
+// La placa ya escrita: sin cuenta regresiva (cambia cada segundo; la agrega la página).
+Poster.state.countdown = false;
 
 const readData = (name) => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'data', name + '.json'), 'utf8')); } catch { return null; } };
 const data = {
@@ -26,11 +28,12 @@ const data = {
   race: Object.fromEntries(RACES.map((r) => [r.id, readData('race-' + r.id)])),
   weekend: Object.fromEntries(RACES.map((r) => [r.id, readData('weekend-' + r.id)]))
 };
+for (const r of RACES) if (data.weekend[r.id]) Poster.state.weekend[r.id] = data.weekend[r.id];
 
 // --- copiar archivos estáticos ---
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(path.join(DIST, 'gp'), { recursive: true });
-for (const f of ['races.js', 'results.js', 'seo.js', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'icon-512.png', 'manifest.webmanifest', 'og.png']) {
+for (const f of ['races.js', 'results.js', 'poster.js', 'seo.js', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'icon-512.png', 'manifest.webmanifest', 'og.png']) {
   if (fs.existsSync(path.join(ROOT, f))) fs.copyFileSync(path.join(ROOT, f), path.join(DIST, f));
 }
 fs.cpSync(path.join(ROOT, 'data'), path.join(DIST, 'data'), { recursive: true });
@@ -62,9 +65,18 @@ const crumbs = (items) => ({
   itemListElement: items.map(([name, p], i) => ({ '@type': 'ListItem', position: i + 1, name, item: SITE + p }))
 });
 
-function write(file, p, extraLD = []) {
+// Placa de cada página, como la dibuja la página en una pantalla de computadora angosta (1080 de ancho).
+function posterFor(kind, r) {
+  if (kind === 'tabla') return data.standings ? Poster.standings(data.standings, { twoCols: true }) : '';
+  if (kind === 'temporada') return data.season ? Poster.season(data.season, { width: 920 }) : '';
+  if (Date.parse(r.end) > now || !data.race[r.id]) return r.days ? Poster.schedule(r) : '';
+  return Poster.results(r, data.race[r.id], { width: 920 });
+}
+
+function write(file, p, extraLD = [], posterHTML = '') {
   let html = template
     .replace(/<!--seo[\s\S]*?<!--\/seo-->/, head(p, extraLD))
+    .replace(/<!--poster-->[\s\S]*?<!--\/poster-->/, posterHTML)
     .replace(/<!--info-->[\s\S]*?<!--\/info-->/, Seo.section(p));
   fs.writeFileSync(path.join(DIST, file), html);
 }
@@ -72,17 +84,17 @@ function write(file, p, extraLD = []) {
 const now = Date.now();
 const pages = [];
 const home = Seo.page('home', null, { ...data, race: data.race[Seo.upcoming(now).id], weekend: data.weekend[Seo.upcoming(now).id] }, now);
-write('index.html', home, [{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'Horarios Colapinto', alternateName: 'Horarios de Franco Colapinto', url: SITE + '/', inLanguage: 'es-AR' }]);
+write('index.html', home, [{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'Horarios Colapinto', alternateName: 'Horarios de Franco Colapinto', url: SITE + '/', inLanguage: 'es-AR' }], posterFor('home', Seo.upcoming(now)));
 pages.push(['/', 1.0]);
 
 for (const r of RACES) {
   const p = Seo.page('gp', r, { ...data, race: data.race[r.id], weekend: data.weekend[r.id] }, now);
-  write(`gp/${r.id}.html`, p, [crumbs([['Horarios Colapinto', '/'], [r.gp, p.path]])]);
+  write(`gp/${r.id}.html`, p, [crumbs([['Horarios Colapinto', '/'], [r.gp, p.path]])], posterFor('gp', r));
   pages.push([p.path, Date.parse(r.end) > now ? 0.9 : 0.6]);
 }
 for (const kind of ['tabla', 'temporada']) {
   const p = Seo.page(kind, null, data, now);
-  write(`${kind}.html`, p, [crumbs([['Horarios Colapinto', '/'], [p.h1, p.path]])]);
+  write(`${kind}.html`, p, [crumbs([['Horarios Colapinto', '/'], [p.h1, p.path]])], posterFor(kind));
   pages.push([p.path, 0.8]);
 }
 

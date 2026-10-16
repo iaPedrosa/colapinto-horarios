@@ -39,23 +39,21 @@
   }
 
   // ---------- bloques ----------
-  function scheduleTable(r, weekend) {
-    const res = {};
-    for (const s of (weekend && weekend.sessions) || []) res[s.name] = s;
-    const rows = window.sessionsOf(r).map((s) => {
-      const x = res[s.name];
-      const out = x ? (x.dsq ? 'DSQ' : x.dns ? 'No largó' : x.dnf ? 'Abandono' : 'P' + x.pos) : '';
-      return `<tr><td>${cap(longDay(s.at))}</td><td>${esc(s.name)}</td><td><b>${s.time}</b></td>${weekend ? `<td>${out}</td>` : ''}</tr>`;
-    }).join('');
-    return `<table class="i-table"><thead><tr><th>Día</th><th>Sesión</th><th>Hora argentina</th>${weekend ? '<th>Franco</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>`;
+  // Resultado de Franco en cada sesión, en una frase (la tabla de horarios ya está en la placa).
+  function weekendLine(r, weekend) {
+    const ss = (weekend && weekend.sessions) || [];
+    if (!ss.length) return '';
+    const txt = ss.map((x) => `${esc(x.name)} <b>${x.dsq ? 'descalificado' : x.dns ? 'no largó' : x.dnf ? 'abandono' : 'P' + x.pos}</b>`);
+    return `<p>Así le fue a Franco en cada sesión del fin de semana: ${txt.join(' · ')}.</p>`;
   }
 
+  // Hora de la clasificación y la carrera en otros países, como tarjetas.
   function countriesBlock(r) {
     const race = raceSession(r);
     const quali = window.sessionsOf(r).find((s) => s.name === 'Clasificación');
-    const rows = COUNTRIES.map(([c, tz]) => `<tr><td>${c}</td><td>${quali ? timeIn(quali.at, tz) : '—'}</td><td><b>${timeIn(race.at, tz)}</b></td></tr>`).join('');
-    return `<h2>Horario del ${esc(r.gp)} en otros países</h2>
-      <table class="i-table"><thead><tr><th>País</th><th>Clasificación</th><th>Carrera</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const items = COUNTRIES.slice(1).map(([c, tz]) => `<li><b>${c}</b>
+      ${quali ? `<span>Clasificación ${timeIn(quali.at, tz)}</span>` : ''}<span>Carrera <b>${timeIn(race.at, tz)}</b></span></li>`).join('');
+    return `<h2>Horario del ${esc(r.gp)} en otros países</h2><ul class="i-tz">${items}</ul>`;
   }
 
   function resultBlock(r, data) {
@@ -76,11 +74,7 @@
       text += o.topSpeed ? ` y su velocidad máxima, ${Math.round(o.topSpeed)} km/h.` : '.';
     }
     if (o && o.stops) text += ` Hizo ${o.stops} ${o.stops === 1 ? 'parada' : 'paradas'} en boxes.`;
-    const rows = j.results.slice(0, 10).concat(classified && Number(mine.position) > 10 ? [mine] : classified ? [] : [mine])
-      .map((x) => `<tr${isFranco(x.Driver) ? ' class="me"' : ''}><td>${/^\d+$/.test(x.positionText) ? x.positionText : 'DNF'}</td><td>${esc(x.Driver.givenName)} ${esc(x.Driver.familyName)}</td><td>${esc(((x.Constructor && x.Constructor.name) || '').replace(/\s+F1 Team$/i, ''))}</td><td>${Number(x.points)}</td></tr>`).join('');
-    return `<p>${text}</p>
-      <h2>Resultado del ${esc(r.gp)} 2026</h2>
-      <table class="i-table"><thead><tr><th>Pos.</th><th>Piloto</th><th>Equipo</th><th>Puntos</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<p>${text}</p>`;
   }
 
   function calendar(season, t, currentId) {
@@ -93,14 +87,14 @@
     return `<h2>Calendario 2026 de Colapinto</h2><ol class="i-cal">${items}</ol>`;
   }
 
-  function standingsTables(st) {
+  // La tabla completa está en la placa; acá, un resumen.
+  function standingsText(st) {
     if (!st) return '<p>La tabla del campeonato no está disponible en este momento.</p>';
-    const d = st.drivers.map((x) => `<tr${x.me ? ' class="me"' : ''}><td>${esc(x.pos)}</td><td>${esc(x.name)}</td><td>${esc(x.team)}</td><td>${x.pts}</td></tr>`).join('');
-    const c = st.teams.map((x) => `<tr${x.me ? ' class="me"' : ''}><td>${esc(x.pos)}</td><td>${esc(x.name)}</td><td>${x.pts}</td></tr>`).join('');
-    return `<h2>Campeonato de pilotos</h2>
-      <table class="i-table"><thead><tr><th>Pos.</th><th>Piloto</th><th>Equipo</th><th>Puntos</th></tr></thead><tbody>${d}</tbody></table>
-      <h2>Campeonato de constructores</h2>
-      <table class="i-table"><thead><tr><th>Pos.</th><th>Equipo</th><th>Puntos</th></tr></thead><tbody>${c}</tbody></table>`;
+    const [p1, p2] = st.drivers, [c1] = st.teams;
+    const me = st.drivers.find((x) => x.me), alp = st.teams.find((x) => x.me);
+    return `<p>Tras la fecha ${esc(st.round)} del Mundial de Fórmula 1 2026, <b>${esc(p1.name)}</b> (${esc(p1.team)}) lidera el campeonato de pilotos con
+      ${p1.pts} puntos, ${p1.pts - p2.pts} más que ${esc(p2.name)}. En constructores manda <b>${esc(c1.name)}</b> con ${c1.pts} puntos.
+      ${me ? `Franco Colapinto es <b>${esc(me.pos)}.º con ${me.pts} puntos</b>` : ''}${alp ? ` y Alpine está ${esc(alp.pos)}.º entre los equipos, con ${alp.pts}` : ''}.</p>`;
   }
 
   function seasonBlock(sz) {
@@ -110,17 +104,9 @@
     const best = done.reduce((m, x) => (!m || x.pos < m.pos ? x : m), null);
     const inPts = A.filter((x) => x.points > 0).length;
     const mate = sz.mate.name || sz.mate.last;
-    const byDate = (x) => RACES.find((r) => Math.abs(Date.parse(r.raceDay) - Date.parse(x.date)) <= 1.5 * 86400000);
-    const rows = A.map((x) => {
-      const r = byDate(x);
-      const q = sz.a.quali[x.round];
-      return `<tr><td>${x.round}</td><td>${r ? `<a href="/gp/${r.id}">${esc(r.gp)}</a>` : '—'}</td><td>${q ? 'P' + q : '—'}</td><td>${x.pos != null ? 'P' + x.pos : 'Abandono'}</td><td>${x.points + (sz.a.sprint[x.round] || 0)}</td></tr>`;
-    }).join('');
     return `<p>Tras la fecha ${esc(sz.round)}, Franco Colapinto suma <b>${sz.me.pts} puntos</b> y está ${sz.me.pos ? `<b>${sz.me.pos}.º</b> en el campeonato de pilotos` : 'en el campeonato'} con Alpine.
       Su mejor resultado es ${best ? `un <b>P${best.pos}</b>` : '—'} y terminó en los puntos en ${inPts} de ${A.length} carreras.
-      Su compañero de equipo, ${esc(mate)}, tiene ${sz.mate.pts} puntos.</p>
-      <h2>Carrera a carrera</h2>
-      <table class="i-table"><thead><tr><th>Fecha</th><th>Gran Premio</th><th>Clasificó</th><th>Resultado</th><th>Puntos</th></tr></thead><tbody>${rows}</tbody></table>`;
+      Su compañero de equipo, ${esc(mate)}, tiene ${sz.mate.pts} puntos.</p>`;
   }
 
   // ---------- páginas ----------
@@ -134,7 +120,7 @@
         title: `Tabla de la Fórmula 1 ${year}: pilotos y constructores`,
         description: `Posiciones del Mundial de Fórmula 1 ${year}${round ? ` tras la fecha ${round}` : ''}: campeonato de pilotos y de constructores, con Franco Colapinto y Alpine.`,
         h1: `Tabla de posiciones de la Fórmula 1 ${year}`,
-        body: standingsTables(d.standings) + calendar(d.season, t)
+        body: standingsText(d.standings) + calendar(d.season, t)
       };
     }
     if (kind === 'temporada') {
@@ -155,10 +141,11 @@
     let intro, body;
     if (!done && rs) {
       intro = `<p>La carrera del <b>${esc(r.gp)}</b> es <b>${esc(when)}</b>. Es la fecha ${r.round} de 23 del Mundial de Fórmula 1 ${year} y se corre en ${esc(where)}.
-        ${r.sprint ? 'Es un fin de semana con carrera sprint.' : ''} Estos son todos los horarios de Franco Colapinto con Alpine, en hora argentina (GMT−3):</p>`;
-      body = intro + scheduleTable(r, d.weekend) + countriesBlock(r);
+        ${r.sprint ? 'Es un fin de semana con carrera sprint.' : ''}${quali ? ` La clasificación es el ${longDay(quali.at)} a las ${quali.time}.` : ''}
+        Todos los horarios de arriba están en hora argentina (GMT−3), igual que en Uruguay.</p>`;
+      body = intro + weekendLine(r, d.weekend) + countriesBlock(r);
     } else {
-      body = resultBlock(r, d.race) + (rs ? `<h2>Horarios del fin de semana</h2>${scheduleTable(r, d.weekend)}` : '');
+      body = resultBlock(r, d.race) + weekendLine(r, d.weekend);
     }
     if (kind === 'home') {
       body += `<h2>¿A qué hora corre Colapinto?</h2>

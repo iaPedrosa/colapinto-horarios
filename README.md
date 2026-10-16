@@ -45,7 +45,7 @@ resultado de Franco en cada sesión (`weekend-*.json`), la tabla (`standings.jso
 
 Vercel corre `node scripts/build.mjs` con cada commit (incluidos los de datos) y publica `dist/`:
 una página HTML ya escrita por cada dirección, con título, descripción, datos estructurados (SportsEvent)
-y el texto de abajo de la placa (`seo.js`), más `sitemap.xml`, `robots.txt` y la imagen para compartir `og.png`.
+y el texto de abajo de la placa (`seo.js`) y la placa ya dibujada (`poster.js`), más `sitemap.xml`, `robots.txt` y la imagen para compartir `og.png`.
 
 - El dominio sale de `VERCEL_PROJECT_PRODUCTION_URL` (si se agrega un dominio propio, se usa solo).
 - Para verificar el sitio en Google Search Console por etiqueta HTML: variable `GOOGLE_SITE_VERIFICATION` en Vercel.
