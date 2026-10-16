@@ -66,6 +66,8 @@ export default async function handler(req, res) {
   } catch (e) { data = null; }
 
   if (!data) return send(res, prev, 120);
-  if (JSON.stringify(data) !== JSON.stringify(prev)) await dispatch();
+  // Solo vale la pena guardar si hay algo nuevo (un fin de semana sin sesiones corridas no cuenta).
+  const empty = m && m[1] === 'weekend' && !data.sessions.length;
+  if (!empty && JSON.stringify(data) !== JSON.stringify(prev)) await dispatch();
   send(res, data, data.complete ? 3600 : 300);
 }
