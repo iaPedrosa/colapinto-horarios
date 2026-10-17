@@ -383,19 +383,38 @@
     const ss = window.sessionsOf(r);
     const start = ss.length ? isoAR(Math.min(...ss.map((s) => s.at))) : r.raceDay;
     const rs = raceSession(r);
+    const place = { '@type': 'Place', name: r.track, address: r.sub && !/sprint|noche/i.test(r.sub) ? r.sub : r.track };
+    const franco = { '@type': 'Person', name: 'Franco Colapinto', nationality: 'Argentina', url: '/franco-colapinto' };
+    // Campos que Google recomienda para eventos. La imagen va como ruta: build.mjs la pasa a dirección completa.
+    // offers apunta a la venta oficial de entradas de la F1 (sin precio: lo fija cada GP).
+    const common = {
+      image: ['/og.png'],
+      performer: franco,
+      organizer: { '@type': 'Organization', name: 'Fórmula 1', url: 'https://www.formula1.com' },
+      offers: { '@type': 'Offer', url: 'https://tickets.formula1.com', availability: 'https://schema.org/InStock' },
+      eventStatus: 'https://schema.org/EventScheduled',
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      location: place
+    };
     return {
       '@context': 'https://schema.org',
       '@type': 'SportsEvent',
       name: `${r.gp} 2026 de Fórmula 1`,
+      description: `${r.gp}, fecha ${r.round} del Mundial de Fórmula 1 2026 en ${r.track}${rs ? `. Carrera: ${rs.dow.toLowerCase()} ${rs.day} a las ${rs.time} (hora argentina)` : ''}. Horarios de Franco Colapinto (Alpine).`,
       sport: 'Fórmula 1',
       startDate: start,
       endDate: rs ? isoAR(rs.at + 2 * 3600000) : r.raceDay,
-      eventStatus: 'https://schema.org/EventScheduled',
-      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-      location: { '@type': 'Place', name: r.track, address: r.sub && !/sprint|noche/i.test(r.sub) ? r.sub : r.track },
-      competitor: { '@type': 'Person', name: 'Franco Colapinto', nationality: 'Argentina' },
+      ...common,
+      competitor: franco,
       url: path,
-      ...(rs ? { subEvent: ss.map((s) => ({ '@type': 'SportsEvent', name: `${s.name} · ${r.gp}`, startDate: isoAR(s.at), location: { '@type': 'Place', name: r.track, address: r.track } })) } : {})
+      ...(rs ? { subEvent: ss.map((s) => ({
+        '@type': 'SportsEvent',
+        name: `${s.name} · ${r.gp}`,
+        description: `${s.name} del ${r.gp} 2026 de Fórmula 1, a las ${s.time} (hora argentina).`,
+        startDate: isoAR(s.at),
+        endDate: isoAR(s.at + 3600000 * (s.name === 'Carrera' ? 2 : 1)),
+        ...common
+      })) } : {})
     };
   }
 

@@ -49,9 +49,14 @@ const template = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const attr = (t) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const verification = process.env.GOOGLE_SITE_VERIFICATION;
 
+// Datos estructurados: las rutas internas ("/og.png", "/franco-colapinto") pasan a dirección completa.
+const absLD = (v) => typeof v === 'string' ? (/^\/(?!\/)/.test(v) ? SITE + v : v)
+  : Array.isArray(v) ? v.map(absLD)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, absLD(x)])) : v;
+
 function head(p, extraLD) {
   const url = SITE + p.path;
-  const ld = [p.jsonld && { ...p.jsonld, url }, ...extraLD].filter(Boolean);
+  const ld = [p.jsonld && absLD({ ...p.jsonld, url }), ...extraLD].filter(Boolean);
   return `<title>${attr(p.title)}</title>
 <meta name="description" content="${attr(p.description)}">
 <link rel="canonical" href="${url}">
