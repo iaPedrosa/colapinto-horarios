@@ -629,10 +629,11 @@ function show(i, push) {
   stage.scrollTop = 0;
   const r = RACES[idx];
   const done = finished(r);
-  if (view === 'schedule' && !r.days) view = 'gp';
+  // Un GP terminado muestra solo el resultado, como las fechas viejas (que no tienen horarios cargados).
+  if (view === 'schedule' && (!r.days || done)) view = 'gp';
   const mode2 = (view === 'standings' || view === 'season') ? view : (done && view === 'gp') ? 'results' : 'schedule';
   $('segRes').hidden = !done;
-  $('segSch').hidden = !r.days;
+  $('segSch').hidden = !r.days || done;
   $('segRes').setAttribute('aria-pressed', String(mode2 === 'results'));
   $('segSch').setAttribute('aria-pressed', String(mode2 === 'schedule'));
   $('segTab').setAttribute('aria-pressed', String(mode2 === 'standings'));
