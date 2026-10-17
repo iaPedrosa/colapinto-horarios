@@ -608,18 +608,31 @@ function refreshWeekend(r) {
 
 function renderResults(r) {
   const my = ++token;
-  paint(P.message(r, 'Cargando<br>resultados…', 'Buscando los datos de la carrera.'));
+  // Si ya lo tenemos (visto antes en esta visita o guardado en el navegador), se dibuja al instante
+  // y después se confirma con el archivo; "Cargando" solo aparece si de verdad tarda.
+  const quick = info.race[r.id] || window.Results.peek(r);
+  let shown = null;
+  const draw = (data) => {
+    shown = JSON.stringify(data);
+    info.race[r.id] = data; renderInfo();
+    paint(P.results(r, data, { width: contentW(), chartH: mode === 'w' ? 230 : 0 }));
+  };
+  if (quick && window.Results.isComplete(quick)) draw(quick);
+  const slow = shown ? 0 : setTimeout(() => {
+    if (my === token) paint(P.message(r, 'Cargando<br>resultados…', 'Buscando los datos de la carrera.'));
+  }, 400);
   window.Results.load(r).then((data) => {
+    clearTimeout(slow);
     if (my !== token) return;
     if (!data) {
-      paint(P.message(r, 'Resultados<br>en camino',
+      if (!shown) paint(P.message(r, 'Resultados<br>en camino',
         'Los datos oficiales suelen aparecer unas horas después de la bandera a cuadros. Volvé a entrar más tarde.'));
       return;
     }
-    info.race[r.id] = data; renderInfo();
-    paint(P.results(r, data, { width: contentW(), chartH: mode === 'w' ? 230 : 0 }));
+    if (JSON.stringify(data) !== shown) draw(data);
   }).catch(() => {
-    if (my !== token) return;
+    clearTimeout(slow);
+    if (my !== token || shown) return;
     paint(P.message(r, 'Sin conexión<br>con los datos', 'No pudimos cargar los resultados. Probá de nuevo en un rato.'));
   });
 }

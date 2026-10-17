@@ -186,6 +186,11 @@
 
   // En la página: archivo guardado → copia del navegador → /api/data → API directa.
   // El archivo manda: así un dato malo guardado en el navegador no tapa uno bueno.
+  // Copia completa ya guardada en el navegador (sin pedir nada), para dibujar al instante.
+  function peek(race) {
+    const c = cacheGet(race.id);
+    return c && isComplete(c) ? c : null;
+  }
   async function load(race) {
     const saved = await getStatic('race-' + race.id);
     if (saved && saved.complete) { cacheSet(race.id, saved); return saved; }
@@ -577,7 +582,7 @@
   }
 
   window.Results = {
-    load, render, loadStandings, renderStandings, loadSeason, renderSeason, loadWeekend, inWeekend, hotSession, isComplete,
+    load, peek, render, loadStandings, renderStandings, loadSeason, renderSeason, loadWeekend, inWeekend, hotSession, isComplete,
     // usados por scripts/update-data.mjs y api/data.js
     fetchRace, fetchStandings, fetchSeason, fetchWeekend
   };
