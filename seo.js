@@ -372,9 +372,9 @@
       h1: `Franco Colapinto en el ${gpYear}`
     } : {
       path: '/gp/' + r.id,
-      title: `Horarios de Colapinto en el ${gpYear} (hora argentina)`,
+      title: `Colapinto en el ${gpYear}: horarios en hora argentina`,
       description: `Horarios del ${gpYear} en hora argentina: ${quali ? `clasificación ${quali.dow.toLowerCase()} ${quali.time} y ` : ''}carrera ${rs ? `${rs.dow.toLowerCase()} ${rs.day} a las ${rs.time}` : ''}. Prácticas${r.sprint ? ', sprint' : ''}, cuenta regresiva y resultados de Franco Colapinto.`,
-      h1: `Horarios de Colapinto en el ${gpYear}`
+      h1: `Franco Colapinto en el ${gpYear}: horarios`
     };
     return { ...meta, body, jsonld: eventLD(r, meta.path) };
   }
