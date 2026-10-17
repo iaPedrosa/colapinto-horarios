@@ -203,7 +203,9 @@
     'Sprint Qualifying': 'Clasificación Sprint', 'Sprint Shootout': 'Clasificación Sprint',
     'Sprint': 'Carrera Sprint', 'Qualifying': 'Clasificación', 'Race': 'Carrera'
   };
-  async function fetchWeekend(race) {
+  // known: sesiones ya guardadas (no se vuelven a pedir; OpenF1 gratis permite 30 pedidos por minuto).
+  async function fetchWeekend(race, known) {
+    const have = new Map(((known && known.sessions) || []).map((x) => [x.name + '|' + x.end, x]));
     const ss = window.sessionsOf(race);
     if (!ss.length) return null;
     const first = Math.min(...ss.map((x) => x.at));
@@ -218,6 +220,8 @@
       const name = SESSION_ES[s.session_name];
       if (!name || s.is_cancelled) continue;
       if (Date.parse(s.date_end) > Date.now()) { pending++; continue; }
+      const old = have.get(name + '|' + s.date_end);
+      if (old) { sessions.push(old); continue; }
       let x = null, mate = null;
       try { x = (await getJSON(`${OPENF1}/session_result?session_key=${s.session_key}&driver_number=${NUM}`))[0]; } catch (e) { /* todavía no está */ }
       if (!x || (x.position == null && !x.dnf && !x.dns && !x.dsq)) { pending++; continue; }
@@ -233,6 +237,11 @@
     const ss = window.sessionsOf(race);
     if (!ss.length) return false;
     return t >= Math.min(...ss.map((x) => x.at)) && t < Date.parse(race.end) + 2 * dayMs;
+  }
+  // "Ventana caliente": de que termina una sesión hasta 3 h después. OpenF1 gratis publica los datos
+  // unos 30 minutos después del final; en ese rato la página consulta seguido y el resto del tiempo no.
+  function hotSession(race, t = Date.now()) {
+    return window.sessionsOf(race).some((x) => { const end = x.at + window.sessionDur(x.name); return t >= end && t < end + 3 * 3600000; });
   }
   async function loadWeekend(race) {
     if (!window.sessionsOf(race).length) return null;
@@ -568,7 +577,7 @@
   }
 
   window.Results = {
-    load, render, loadStandings, renderStandings, loadSeason, renderSeason, loadWeekend, inWeekend, isComplete,
+    load, render, loadStandings, renderStandings, loadSeason, renderSeason, loadWeekend, inWeekend, hotSession, isComplete,
     // usados por scripts/update-data.mjs y api/data.js
     fetchRace, fetchStandings, fetchSeason, fetchWeekend
   };

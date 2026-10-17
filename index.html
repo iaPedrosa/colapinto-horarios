@@ -724,11 +724,16 @@ setInterval(() => {
   if (key !== el.getAttribute('data-key')) { const y = stage.scrollTop; renderSchedule(r); stage.scrollTop = y; refreshWeekend(r); return; }
   if (!nx.live) $('cdTime').textContent = P.fmtLeft(nx.at - Date.now());
 }, 1000);
-// Durante el fin de semana, cada 3 minutos se fija si ya está el resultado de la última sesión.
+// Hasta 3 h después de cada sesión, cada 45 s se fija si ya está su resultado (y se ve sin recargar).
+// Fuera de esa ventana no consulta nada: el resto de la semana la página no hace pedidos.
 setInterval(() => {
   const r = RACES[idx];
-  if (r.days && window.Results.inWeekend(r)) refreshWeekend(r);
-}, 180000);
+  if (r.days && !document.hidden && window.Results.hotSession(r)) refreshWeekend(r);
+}, 45000);
+document.addEventListener('visibilitychange', () => {
+  const r = RACES[idx];
+  if (!document.hidden && r.days && window.Results.inWeekend(r)) refreshWeekend(r);
+});
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
 
 // ---------- compartir la placa como imagen ----------

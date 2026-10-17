@@ -81,7 +81,7 @@ for (const race of RACES) {
   const prev = readJSON('weekend-' + race.id);
   if (prev && prev.complete) continue;
   try {
-    const data = await Results.fetchWeekend(race);
+    const data = await Results.fetchWeekend(race, prev);
     if (!data || !data.sessions.length) continue;
     if (writeIfChanged('weekend-' + race.id, data)) changed++;
     log.push(`${race.id}: ${data.sessions.length} sesiones${data.complete ? ' (completo)' : ''}`);

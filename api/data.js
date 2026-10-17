@@ -43,7 +43,7 @@ async function dispatch() {
 function send(res, data, seconds) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   // El navegador no guarda; el caché de Vercel sí, y sirve la copia vieja mientras actualiza.
-  res.setHeader('Cache-Control', `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${seconds * 2}`);
+  res.setHeader('Cache-Control', `public, max-age=0, s-maxage=${seconds}, stale-while-revalidate=${seconds <= 30 ? 0 : seconds * 2}`);
   res.status(200).send(JSON.stringify(data ?? null));
 }
 
@@ -62,12 +62,15 @@ export default async function handler(req, res) {
     if (f === 'standings') data = await Results.fetchStandings();
     else if (f === 'season') data = await Results.fetchSeason(await Results.fetchStandings());
     else if (m[1] === 'race') data = Date.parse(race.end) < Date.now() ? await Results.fetchRace(race) : null;
-    else data = await Results.fetchWeekend(race);
+    else data = await Results.fetchWeekend(race, prev);
   } catch (e) { data = null; }
 
-  if (!data) return send(res, prev, 120);
+  // Recién terminada una sesión, todos los visitantes comparten la respuesta solo 30 s (llega rápido);
+  // el resto del fin de semana, 5 minutos.
+  const hot = m && m[1] === 'weekend' && Results.hotSession(race);
+  if (!data) return send(res, prev, hot ? 30 : 120);
   // Solo vale la pena guardar si hay algo nuevo (un fin de semana sin sesiones corridas no cuenta).
   const empty = m && m[1] === 'weekend' && !data.sessions.length;
   if (!empty && JSON.stringify(data) !== JSON.stringify(prev)) await dispatch();
-  send(res, data, data.complete ? 3600 : 300);
+  send(res, data, data.complete ? 3600 : hot ? 30 : 300);
 }
