@@ -26,8 +26,13 @@ const data = {
   standings: readData('standings'),
   season: readData('season'),
   race: Object.fromEntries(RACES.map((r) => [r.id, readData('race-' + r.id)])),
-  weekend: Object.fromEntries(RACES.map((r) => [r.id, readData('weekend-' + r.id)]))
+  weekend: Object.fromEntries(RACES.map((r) => [r.id, readData('weekend-' + r.id)])),
+  weatherOf: Object.fromEntries(RACES.map((r) => [r.id, readData('weather-' + r.id)])),
+  circuits: readData('circuits'),
+  career: readData('career')
 };
+// Datos de un GP para su página (y para la principal, que muestra el próximo).
+const gpData = (r) => ({ ...data, race: data.race[r.id], weekend: data.weekend[r.id], weather: data.weatherOf[r.id] });
 for (const r of RACES) if (data.weekend[r.id]) Poster.state.weekend[r.id] = data.weekend[r.id];
 
 // --- copiar archivos estáticos ---
@@ -37,6 +42,7 @@ for (const f of ['races.js', 'results.js', 'poster.js', 'seo.js', 'favicon.svg',
   if (fs.existsSync(path.join(ROOT, f))) fs.copyFileSync(path.join(ROOT, f), path.join(DIST, f));
 }
 fs.cpSync(path.join(ROOT, 'data'), path.join(DIST, 'data'), { recursive: true });
+fs.cpSync(path.join(ROOT, 'fonts'), path.join(DIST, 'fonts'), { recursive: true });
 
 // --- páginas ---
 const template = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -66,7 +72,12 @@ const crumbs = (items) => ({
 });
 
 // Placa de cada página, como la dibuja la página en una pantalla de computadora angosta (1080 de ancho).
-function posterFor(kind, r) {
+function posterFor(kind, r, slug) {
+  if (kind === 'pais') {
+    const c = Seo.countryBySlug(slug), up = Seo.upcoming(now);
+    return up.days ? Poster.schedule(up, { tz: c.tz, label: Seo.countryLabel(c, up) }) : '';
+  }
+  if (kind === 'ficha') kind = 'temporada';
   if (kind === 'tabla') return data.standings ? Poster.standings(data.standings, { twoCols: true }) : '';
   if (kind === 'temporada') return data.season ? Poster.season(data.season, { width: 920 }) : '';
   if (Date.parse(r.end) > now || !data.race[r.id]) return r.days ? Poster.schedule(r) : '';
@@ -83,12 +94,12 @@ function write(file, p, extraLD = [], posterHTML = '') {
 
 const now = Date.now();
 const pages = [];
-const home = Seo.page('home', null, { ...data, race: data.race[Seo.upcoming(now).id], weekend: data.weekend[Seo.upcoming(now).id] }, now);
+const home = Seo.page('home', null, gpData(Seo.upcoming(now)), now);
 write('index.html', home, [{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'Horarios Colapinto', alternateName: 'Horarios de Franco Colapinto', url: SITE + '/', inLanguage: 'es-AR' }], posterFor('home', Seo.upcoming(now)));
 pages.push(['/', 1.0]);
 
 for (const r of RACES) {
-  const p = Seo.page('gp', r, { ...data, race: data.race[r.id], weekend: data.weekend[r.id] }, now);
+  const p = Seo.page('gp', r, gpData(r), now);
   write(`gp/${r.id}.html`, p, [crumbs([['Horarios Colapinto', '/'], [r.gp, p.path]])], posterFor('gp', r));
   pages.push([p.path, Date.parse(r.end) > now ? 0.9 : 0.6]);
 }
@@ -96,6 +107,16 @@ for (const kind of ['tabla', 'temporada']) {
   const p = Seo.page(kind, null, data, now);
   write(`${kind}.html`, p, [crumbs([['Horarios Colapinto', '/'], [p.h1, p.path]])], posterFor(kind));
   pages.push([p.path, 0.8]);
+}
+{
+  const p = Seo.page('ficha', null, data, now);
+  write('franco-colapinto.html', p, [crumbs([['Horarios Colapinto', '/'], ['Franco Colapinto', p.path]])], posterFor('ficha'));
+  pages.push([p.path, 0.8]);
+}
+for (const c of Seo.countries) {
+  const p = Seo.page('pais', null, gpData(Seo.upcoming(now)), now, c.slug);
+  write(`${c.slug}.html`, p, [crumbs([['Horarios Colapinto', '/'], [`Horarios en ${c.name}`, p.path]])], posterFor('pais', null, c.slug));
+  pages.push([p.path, 0.7]);
 }
 
 // --- sitemap y robots ---

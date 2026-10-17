@@ -26,8 +26,7 @@
     }
     return null;
   }
-  function rowState(r, n, t, day) {
-    const at = window.sessionAt(r, day, t);
+  function rowState(r, n, at) {
     if (at == null) return '';
     if (Date.now() >= at + DUR(n)) return ' done';
     const nx = nextSession(r);
@@ -51,6 +50,8 @@
   }
 
   const FOOTER = '<div class="footer"><div class="vamos">VAMOS FRANCO</div><div class="sign">ARGENTINA · #43</div></div>';
+  // La imagen para compartir lleva la dirección de la página en el pie.
+  const shareSign = (html) => html.replace('<div class="sign">ARGENTINA · #43</div>', '<div class="sign share-url">HORARIOSCOLAPINTO.COM.AR</div>');
 
   function backdrop(withLines) {
     const W = state.W;
@@ -67,12 +68,32 @@
   }
 
   // ---------- horarios ----------
-  function schedule(r) {
-    const days = r.days.map((d) => `
+  // Días con sus sesiones en la hora de un país (tz). Sin tz: hora argentina, tal como está en races.js.
+  const DOW = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  function local(at, tz) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(at).map((x) => [x.type, x.value]));
+    const wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
+    return { dow: DOW[wd], day: parts.day, time: `${parts.hour}:${parts.minute}` };
+  }
+  function scheduleDays(r, tz) {
+    const ss = window.sessionsOf(r);
+    const conv = (s) => (tz ? { ...s, ...local(s.at, tz) } : s);
+    const days = [];
+    for (const s of ss.filter((x) => x.key !== 'race').map(conv)) {
+      const last = days[days.length - 1];
+      if (last && last.day === s.day) last.s.push(s); else days.push({ dow: s.dow, day: s.day, s: [s] });
+    }
+    return { days, race: conv(ss.find((x) => x.key === 'race')) };
+  }
+  // tz: { tz, label } para mostrar los horarios de otro país (por ejemplo { tz: 'America/Mexico_City', label: 'MÉXICO (GMT−6)' }).
+  function schedule(r, opts = {}) {
+    const { days: dd, race } = scheduleDays(r, opts.tz);
+    const days = dd.map((d) => `
       <div class="day">
         <div class="day-badge"><div class="dow">${d.dow}</div><div class="dnum">${d.day}</div></div>
-        <div class="sessions">${d.s.map(([n, t]) => `
-          <div class="session${rowState(r, n, t, d.day)}"><div class="s-name">${esc(n)}</div><div class="s-right">${sessionRes(r, n)}<div class="s-time">${t}</div></div></div>`).join('')}
+        <div class="sessions">${d.s.map((x) => `
+          <div class="session${rowState(r, x.name, x.at)}"><div class="s-name">${esc(x.name)}</div><div class="s-right">${sessionRes(r, x.name)}<div class="s-time">${x.time}</div></div></div>`).join('')}
         </div>
       </div>`).join('');
     return `
@@ -85,17 +106,17 @@
           <div class="gp-tag">${esc(r.gp.toUpperCase())}</div>
           <div class="gp-dates">${r.dates}</div>
         </div>
-        <div class="sub">${clock} HORARIOS DE ARGENTINA (GMT−3) · ${esc(r.sub.toUpperCase())}</div>
+        <div class="sub">${clock} HORARIOS DE ${esc(opts.label || 'ARGENTINA (GMT−3)')} · ${esc(r.sub.toUpperCase())}</div>
         ${countdownHTML(r)}
         </div>
         <div class="cb">
         <div class="days${r.compact ? ' compact' : ''}${nextSession(r) ? ' with-cd' : ''}">
           ${days}
           <div class="race">
-            <div class="day-badge"><div class="dow">${r.race.dow}</div><div class="dnum">${r.race.day}</div></div>
+            <div class="day-badge"><div class="dow">${race.dow}</div><div class="dnum">${race.day}</div></div>
             <div class="race-body">
               <div><div class="race-kicker">${esc(r.race.kicker.toUpperCase())}</div><div class="race-title">Carrera</div></div>
-              <div class="s-right">${sessionRes(r, 'Carrera')}<div class="race-time">${r.race.time}</div></div>
+              <div class="s-right">${sessionRes(r, 'Carrera')}<div class="race-time">${race.time}</div></div>
             </div>
           </div>
         </div>
@@ -137,7 +158,7 @@
   const standings = (d, opts) => standingsShell(standingsHead(d.round) + `<div class="full">${window.Results.renderStandings(d, opts)}</div>`, true);
 
   window.Poster = {
-    state, nextSession, fmtLeft, msgBlock,
+    state, nextSession, fmtLeft, msgBlock, shareSign, local,
     schedule, message, results, resultsHead, resultsShell,
     seasonHead, seasonShell, season, standingsHead, standingsShell, standings
   };

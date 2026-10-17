@@ -31,9 +31,9 @@ if (navigator.standalone) {
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/barlow-condensed-900-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
   :root {
     --navy: #04142B;
@@ -342,12 +342,45 @@ if (navigator.standalone) {
   .i-cal li[aria-current] { background: var(--card-2); box-shadow: inset 4px 0 var(--pink); }
   .i-cal span { font-size: 16px; letter-spacing: .06em; color: var(--celeste); }
   .i-src { margin-top: 30px !important; font-size: 15px; color: #6F8BB0; }
+  .info h3 { margin: 22px 0 6px; font-weight: 800; font-size: 20px; letter-spacing: .04em; color: var(--white); }
+  .i-note { font-size: 15px; color: #6F8BB0; }
+  .i-rest li { gap: 2px; }
+  .i-rest span { font-size: 17px; letter-spacing: .02em; color: #D6E6F7; }
+  .i-more { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .i-more a { display: block; background: var(--card); padding: 8px 14px; text-decoration: none; font-weight: 700; letter-spacing: .04em; }
+  .i-more a:hover { background: var(--card-2); color: var(--white); }
+  .i-scroll { overflow-x: auto; }
+  .i-table { width: 100%; border-collapse: collapse; font-size: 19px; white-space: nowrap; }
+  .i-table th { text-align: left; font-weight: 700; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--celeste); padding: 8px 10px; }
+  .i-table td { background: var(--card); padding: 8px 10px; border-top: 3px solid #020B18; }
+  .i-table tr.tot td { background: var(--card-2); }
+
+  /* ---------- compartir la placa como imagen ---------- */
+  .top-row { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+  nav .share-btn { width: 40px; height: 40px; flex-shrink: 0; border-color: var(--pink); }
+  .share-dlg { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(2, 11, 24, .88); }
+  .share-dlg[hidden] { display: none; }
+  .share-box { width: 100%; max-width: 420px; max-height: 100%; display: flex; flex-direction: column; gap: 14px; background: var(--card); padding: 18px; }
+  .share-head { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 22px; letter-spacing: .1em; }
+  .share-head button { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--celeste); background: transparent; color: var(--white); cursor: pointer; font-size: 20px; }
+  .share-prev { min-height: 160px; max-height: 60vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--navy); color: var(--celeste); font-weight: 700; letter-spacing: .1em; }
+  .share-prev img { max-width: 100%; max-height: 60vh; display: block; }
+  .share-acts { display: flex; gap: 10px; }
+  .share-acts button, .share-acts a { flex: 1; height: 48px; border-radius: 999px; border: 0; display: grid; place-items: center; cursor: pointer;
+    font: 800 18px/1 'Barlow Condensed', sans-serif; letter-spacing: .12em; text-decoration: none; }
+  .share-acts .main { background: var(--pink); color: var(--navy); }
+  .share-acts .alt { background: var(--card-2); color: var(--white); }
+  .share-acts [hidden] { display: none; }
+  .share-tip { margin: 0; font-weight: 600; font-size: 16px; color: var(--celeste); }
 
   @media (max-width: 480px) {
     .info { font-size: 18px; }
     .info h1 { font-size: 32px; }
     .i-tz { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .seg button { padding: 0 10px; font-size: 14px; letter-spacing: .06em; }
+    .seg button { padding: 0 8px; font-size: 14px; letter-spacing: .05em; }
+    .top-row { gap: 6px; }
+    nav .share-btn { width: 34px; height: 34px; }
     .where-gp { font-size: 18px; }
     .where-meta { font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
   }
@@ -363,11 +396,16 @@ if (navigator.standalone) {
 </main>
 
 <nav aria-label="Grandes Premios">
+  <div class="top-row">
   <div class="seg" id="seg" role="group" aria-label="Ver">
     <button type="button" id="segRes" aria-pressed="true">RESULTADOS</button>
     <button type="button" id="segSch" aria-pressed="false">HORARIOS</button>
     <button type="button" id="segTab" aria-pressed="false">TABLA</button>
     <button type="button" id="segSea" aria-pressed="false">TEMPORADA</button>
+  </div>
+  <button type="button" id="shareBtn" class="share-btn" aria-label="Compartir esta placa como imagen">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+  </button>
   </div>
   <div class="ctrls">
   <button id="prev" type="button" aria-label="Gran Premio anterior">
@@ -383,6 +421,18 @@ if (navigator.standalone) {
   </button>
   </div>
 </nav>
+
+<div class="share-dlg" id="shareDlg" role="dialog" aria-modal="true" aria-labelledby="shareTitle" hidden>
+  <div class="share-box">
+    <div class="share-head"><span id="shareTitle">COMPARTIR</span><button type="button" id="shareClose" aria-label="Cerrar">✕</button></div>
+    <div class="share-prev" id="sharePrev">ARMANDO LA IMAGEN…</div>
+    <p class="share-tip" id="shareTip">Mandala por WhatsApp o subila a tu historia de Instagram.</p>
+    <div class="share-acts">
+      <button type="button" class="main" id="shareGo" hidden>COMPARTIR</button>
+      <a class="alt" id="shareDl" hidden>DESCARGAR</a>
+    </div>
+  </div>
+</div>
 
 <script src="/races.js"></script>
 <script src="/results.js"></script>
@@ -466,26 +516,33 @@ const finished = (r) => Date.parse(r.end) <= now;
 let view = 'gp';        // 'gp' (resultados si terminó, si no horarios), 'schedule', 'standings' o 'season'
 let token = 0;          // evita que una respuesta lenta pise otro GP
 
-// ---------- direcciones: /, /gp/<id>, /tabla, /temporada ----------
+// ---------- direcciones: /, /gp/<id>, /tabla, /temporada, /franco-colapinto y /<país> ----------
 let home = false;       // en "/" se ve la próxima carrera
+let ficha = false;      // /franco-colapinto: la placa de la temporada con la ficha de Franco abajo
+let country = null;     // /mexico, /espana…: los horarios en la hora de ese país
 function route() {
   const p = location.pathname.replace(/\.html$/, '').replace(/\/+$/, '');
   const gp = /^\/gp\/([a-z0-9-]+)$/.exec(p);
   const byHash = RACES.findIndex((r) => '#' + r.id === location.hash);   // links viejos (#las-vegas)
+  const c = window.Seo.countryBySlug(p.slice(1));
   if (gp && RACES.some((r) => r.id === gp[1])) return { idx: RACES.findIndex((r) => r.id === gp[1]), view: 'gp' };
   if (p === '/tabla') return { idx: upcomingIdx, view: 'standings' };
   if (p === '/temporada') return { idx: upcomingIdx, view: 'season' };
+  if (p === '/franco-colapinto') return { idx: upcomingIdx, view: 'season', ficha: true };
+  if (c) return { idx: upcomingIdx, view: 'gp', country: c };
   if (byHash !== -1) return { idx: byHash, view: 'gp' };
   return { idx: upcomingIdx, view: 'gp', home: true };
 }
-const pathOf = () => view === 'standings' ? '/tabla' : view === 'season' ? '/temporada' : home ? '/' : '/gp/' + RACES[idx].id;
+const pathOf = () => view === 'standings' ? '/tabla' : view === 'season' ? (ficha ? '/franco-colapinto' : '/temporada')
+  : country ? '/' + country.slug : home ? '/' : '/gp/' + RACES[idx].id;
 
 // ---------- información debajo de la placa (también la lee Google) ----------
-const info = { race: {}, standings: null, season: null };
+const info = { race: {}, weather: {}, standings: null, season: null, circuits: null, career: null };
 function renderInfo() {
   const r = RACES[idx];
-  const kind = view === 'standings' ? 'tabla' : view === 'season' ? 'temporada' : home ? 'home' : 'gp';
-  const p = window.Seo.page(kind, r, { race: info.race[r.id], weekend: weekend[r.id], standings: info.standings, season: info.season });
+  const kind = view === 'standings' ? 'tabla' : view === 'season' ? (ficha ? 'ficha' : 'temporada') : country ? 'pais' : home ? 'home' : 'gp';
+  const p = window.Seo.page(kind, r, { race: info.race[r.id], weekend: weekend[r.id], standings: info.standings, season: info.season,
+    circuits: info.circuits, career: info.career, weather: info.weather[r.id] }, Date.now(), country && country.slug);
   $('info').innerHTML = window.Seo.section(p);
   document.title = p.title;
   const d = document.querySelector('meta[name="description"]');
@@ -497,6 +554,8 @@ function renderInfo() {
 function setView(v) {
   view = v;
   home = false;
+  ficha = false;
+  if (v === 'standings' || v === 'season') country = null;
   show(idx, true);
 }
 $('segRes').addEventListener('click', () => setView('gp'));
@@ -532,7 +591,8 @@ function renderStandings() {
   });
 }
 
-function renderSchedule(r) { paint(P.schedule(r)); }
+const tzOpts = (r) => country ? { tz: country.tz, label: window.Seo.countryLabel(country, r) } : {};
+function renderSchedule(r) { paint(P.schedule(r, tzOpts(r))); }
 // Trae el resultado de Franco en las sesiones ya corridas y, si cambió, vuelve a dibujar.
 function refreshWeekend(r) {
   const ss = window.sessionsOf(r);
@@ -582,6 +642,7 @@ function show(i, push) {
   else if (mode2 === 'results') renderResults(r);
   else { token++; renderSchedule(r); }
   if (r.days) refreshWeekend(r);
+  loadWeather(r);
   $('whereGp').textContent = r.gp;
   $('whereMeta').innerHTML = `FECHA ${r.round} DE 23 · ${status(idx).toUpperCase()}`;
   [...$('dots').children].forEach((d, k) => d.classList.toggle('on', k === idx));
@@ -591,7 +652,15 @@ function show(i, push) {
   renderInfo();
 }
 
-function go(i) { if (view === 'standings' || view === 'season') view = 'gp'; home = false; show(i, true); }
+// Pronóstico del clima del GP (solo existe desde unos días antes); se pide una vez por GP.
+const getData = (name) => fetch(`/data/${name}.json`, { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+function loadWeather(r) {
+  if (r.id in info.weather || finished(r)) return;
+  info.weather[r.id] = null;
+  getData('weather-' + r.id).then((w) => { if (w) { info.weather[r.id] = w; if (RACES[idx] === r) renderInfo(); } });
+}
+
+function go(i) { if (view === 'standings' || view === 'season') view = 'gp'; home = false; ficha = false; show(i, true); }
 $('prev').addEventListener('click', () => go(idx - 1));
 $('next').addEventListener('click', () => go(idx + 1));
 document.addEventListener('keydown', (e) => {
@@ -633,9 +702,10 @@ stage.addEventListener('touchend', (e) => {
 });
 
 const start = route();
-view = start.view; home = !!start.home;
+view = start.view; home = !!start.home; ficha = !!start.ficha; country = start.country || null;
 fit();
 show(start.idx, !!location.hash);
+Promise.all([getData('circuits'), getData('career')]).then(([c, k]) => { info.circuits = c; info.career = k; renderInfo(); });
 // La temporada completa el calendario de abajo con el resultado de cada fecha.
 window.Results.loadSeason().then((d) => { if (d) { info.season = d; renderInfo(); } }).catch(() => {});
 let resizeT = 0;
@@ -659,6 +729,99 @@ setInterval(() => {
   if (r.days && window.Results.inWeekend(r)) refreshWeekend(r);
 }, 180000);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+
+// ---------- compartir la placa como imagen ----------
+// Se arma una copia de la placa en formato celular (720 de ancho, alta, para estados e historias), con la
+// dirección de la página en el pie, y se convierte en PNG con html-to-image (se carga recién al usarlo).
+const shareDlg = $('shareDlg'), sharePrev = $('sharePrev'), shareGo = $('shareGo'), shareDl = $('shareDl');
+let shareFile = null, shareUrl = null;
+function loadScript(src) {
+  return new Promise((ok, fail) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = fail; document.head.appendChild(el); });
+}
+let fontCSS = null;
+// Las fuentes van adentro de la imagen como data URL (si no, sale con otra letra).
+async function fontEmbedCSS() {
+  if (fontCSS) return fontCSS;
+  const css = await (await fetch('/fonts/fonts.css')).text();
+  const urls = [...new Set([...css.matchAll(/url\('([^']+)'\)/g)].map((m) => m[1]))];
+  let out = css;
+  for (const u of urls) {
+    const b = await (await fetch(u)).blob();
+    const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(b); });
+    out = out.split(u).join(data);
+  }
+  return (fontCSS = out);
+}
+// HTML de la placa que se está viendo, en formato celular.
+function shareHTML() {
+  const r = RACES[idx];
+  const W0 = P.state.W, cd = P.state.countdown;
+  P.state.W = 720; P.state.countdown = false;
+  let html;
+  try {
+    const pressed = (id) => $(id).getAttribute('aria-pressed') === 'true';
+    if (pressed('segTab') && info.standings) html = P.standings(info.standings, { twoCols: false });
+    else if (pressed('segSea') && info.season) html = P.season(info.season, { width: 640 });
+    else if (pressed('segRes') && info.race[r.id]) html = P.results(r, info.race[r.id], { width: 640 });
+    else if (r.days) html = P.schedule(r, tzOpts(r));
+    else html = poster.innerHTML;
+  } finally { P.state.W = W0; P.state.countdown = cd; }
+  return P.shareSign(html);
+}
+async function makeShareImage() {
+  // La copia va dentro de un contenedor fuera de la pantalla: si la copia misma se corre, la imagen sale vacía.
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-10000px;top:0;width:720px;overflow:hidden';
+  const box = document.createElement('div');
+  box.className = 'poster m share';
+  box.style.cssText = 'position:relative;left:0;top:0;width:720px;height:1280px;transform:none';
+  box.innerHTML = shareHTML();
+  wrap.appendChild(box);
+  document.body.appendChild(wrap);
+  try {
+    const c = box.querySelector('.content');
+    const extra = box.querySelector('.lines') ? 300 : 150;
+    const H = Math.max(1280, Math.ceil(c.offsetTop + c.offsetHeight + extra));
+    box.style.height = H + 'px';
+    if (!window.htmlToImage) await loadScript('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js');
+    const opts = { width: 720, height: H, pixelRatio: 1.5, backgroundColor: '#04142B', fontEmbedCSS: await fontEmbedCSS() };
+    // Safari a veces dibuja la primera vez sin terminar de cargar las fuentes: se hace dos veces.
+    await window.htmlToImage.toBlob(box, opts);
+    return await window.htmlToImage.toBlob(box, opts);
+  } finally { wrap.remove(); }
+}
+function closeShare() {
+  shareDlg.hidden = true;
+  if (shareUrl) URL.revokeObjectURL(shareUrl);
+  shareUrl = null; shareFile = null;
+}
+$('shareBtn').addEventListener('click', async () => {
+  shareDlg.hidden = false;
+  shareGo.hidden = true; shareDl.hidden = true;
+  sharePrev.textContent = 'ARMANDO LA IMAGEN…';
+  $('shareClose').focus();
+  try {
+    const blob = await makeShareImage();
+    const r = RACES[idx];
+    const name = `colapinto-${view === 'standings' ? 'tabla' : view === 'season' ? 'temporada' : r.id}.png`;
+    shareFile = new File([blob], name, { type: 'image/png' });
+    shareUrl = URL.createObjectURL(blob);
+    sharePrev.innerHTML = `<img src="${shareUrl}" alt="Vista previa de la imagen para compartir">`;
+    shareGo.hidden = !(navigator.canShare && navigator.canShare({ files: [shareFile] }));
+    shareDl.hidden = false;
+    shareDl.href = shareUrl; shareDl.download = name;
+  } catch (e) {
+    sharePrev.textContent = 'NO PUDIMOS ARMAR LA IMAGEN. PROBÁ DE NUEVO.';
+  }
+});
+shareGo.addEventListener('click', async () => {
+  try {
+    await navigator.share({ files: [shareFile], title: document.title, text: `${document.title} · ${location.origin}${pathOf()}` });
+  } catch (e) { /* el usuario cerró el menú de compartir */ }
+});
+$('shareClose').addEventListener('click', closeShare);
+shareDlg.addEventListener('click', (e) => { if (e.target === shareDlg) closeShare(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !shareDlg.hidden) closeShare(); });
 </script>
 </body>
 </html>

@@ -8,6 +8,11 @@ Página web con los horarios **en hora argentina (GMT−3)** de cada Gran Premio
 - Durante el fin de semana, al lado de cada sesión ya corrida aparece la posición de Franco.
 - En computadora la placa ocupa todo el ancho, en dos columnas; en el celular se ve igual que siempre.
 
+- **Compartir**: el botón al lado de las pestañas arma una imagen de la placa en formato celular (con la dirección de la página) para WhatsApp o historias de Instagram.
+- **Horarios por país**: `/mexico`, `/espana`, `/chile`, `/colombia`, `/uruguay` y `/peru` muestran la placa en la hora de ese país. La principal sigue siendo Argentina.
+- **Ficha de Franco** (`/franco-colapinto`): quién es, de dónde viene y sus números en cada temporada (los datos biográficos están chequeados en Wikipedia y escritos en `seo.js`).
+- **Crónica y previa** de cada GP, abajo de la placa: cómo le fue en cada sesión comparado con su compañero, el circuito, qué pasó ahí en 2024 y 2025 y el pronóstico del clima.
+
 ## Resultados
 
 Cuando un GP ya terminó, la página muestra el resultado de Franco (con un botón para volver a los horarios):
@@ -30,7 +35,9 @@ Los resultados suelen aparecer unas horas después de la carrera. Una vez comple
 ## Datos guardados (sin llamar a las APIs en cada visita)
 
 La carpeta `data/` es la base de datos: un JSON por GP (`race-*.json`), uno por fin de semana con el
-resultado de Franco en cada sesión (`weekend-*.json`), la tabla (`standings.json`) y la temporada (`season.json`).
+resultado de Franco (y de su compañero) en cada sesión (`weekend-*.json`), la tabla (`standings.json`), la temporada (`season.json`),
+los circuitos con lo que pasó en 2024 y 2025 (`circuits.json`, se arma una sola vez), el pronóstico del clima del próximo GP
+(`weather-*.json`, de Open-Meteo, desde 10 días antes) y la carrera de Franco año por año (`career.json`).
 
 - `scripts/update-data.mjs` los descarga. Lo corre GitHub Actions (`.github/workflows/update-data.yml`)
   con un cron (GitHub lo ejecuta cada varias horas, no a horario exacto) y cada vez que `/api/data` lo dispara.

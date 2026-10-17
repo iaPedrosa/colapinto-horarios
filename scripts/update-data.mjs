@@ -104,5 +104,108 @@ try {
   log.push(`tabla/temporada: error (${e.message})`);
 }
 
+// --- Jolpica directo (para lo que no usa la página) ---
+const JOLPICA = process.env.JOLPICA_URL || 'https://api.jolpi.ca/ergast/f1';
+const jget = async (p) => {
+  const res = await fetch(`${JOLPICA}/${p}`, { headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error(res.status + ' ' + p);
+  return (await res.json()).MRData;
+};
+const near = (a, b) => Math.abs(Date.parse(a) - Date.parse(b)) <= 1.5 * 86400000;
+const HISTORY_YEARS = [2024, 2025];
+
+// 4) Circuitos: dónde queda cada GP y qué pasó ahí en 2024 y 2025 (ganador, vueltas, resultado de Franco).
+//    Son datos del pasado: se arma una vez y no se vuelve a pedir.
+try {
+  if (!readJSON('circuits')) {
+    const cal = (await jget('2026.json?limit=40')).RaceTable.Races;
+    const past = {};
+    for (const y of HISTORY_YEARS) {
+      const winners = (await jget(`${y}/results/1.json?limit=40`)).RaceTable.Races;
+      const mine = (await jget(`${y}/drivers/colapinto/results.json?limit=40`)).RaceTable.Races;
+      past[y] = { winners, mine };
+    }
+    const out = {};
+    for (const race of RACES) {
+      const c = cal.find((x) => near(x.date, race.raceDay)) || cal.find((x) => String(x.round) === String(race.round));
+      if (!c) continue;
+      const id = c.Circuit.circuitId;
+      const history = HISTORY_YEARS.map((y) => {
+        const w = past[y].winners.find((x) => x.Circuit.circuitId === id);
+        if (!w) return null;
+        const m = past[y].mine.find((x) => x.Circuit.circuitId === id);
+        const r = m && m.Results[0];
+        return {
+          year: y, gp: w.raceName, winner: `${w.Results[0].Driver.givenName} ${w.Results[0].Driver.familyName}`, laps: Number(w.Results[0].laps),
+          franco: r ? { pos: r.positionText, grid: r.grid, points: Number(r.points), team: r.Constructor.name.replace(/\s+F1 Team$/i, ''), status: r.status } : null
+        };
+      }).filter(Boolean);
+      out[race.id] = {
+        circuitId: id, name: c.Circuit.circuitName, locality: c.Circuit.Location.locality, country: c.Circuit.Location.country,
+        lat: Number(c.Circuit.Location.lat), long: Number(c.Circuit.Location.long), history
+      };
+    }
+    if (writeIfChanged('circuits', out)) changed++;
+    log.push(`circuitos: ${Object.keys(out).length}`);
+  }
+} catch (e) {
+  log.push(`circuitos: error (${e.message})`);
+}
+
+// 5) Pronóstico del clima del próximo GP (Open-Meteo, gratis y sin clave), desde 10 días antes.
+//    Valores redondeados para no generar un commit por cada décima de grado.
+try {
+  const circuits = readJSON('circuits') || {};
+  for (const race of RACES) {
+    const ss = window.sessionsOf(race);
+    const c = circuits[race.id];
+    const days = (Date.parse(race.raceDay) - now) / 86400000;
+    if (!ss.length || !c || days < -1 || days > 10) continue;
+    const from = new Date(Date.parse(race.raceDay) - 2 * 86400000).toISOString().slice(0, 10);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.long}&timezone=auto`
+      + `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&start_date=${from}&end_date=${race.raceDay}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status + ' open-meteo');
+    const d = (await res.json()).daily;
+    const out = { id: race.id, days: d.time.map((date, i) => ({
+      date, max: Math.round(d.temperature_2m_max[i]), min: Math.round(d.temperature_2m_min[i]),
+      rain: Math.round((d.precipitation_probability_max[i] ?? 0) / 10) * 10, code: d.weather_code[i]
+    })) };
+    if (writeIfChanged('weather-' + race.id, out)) changed++;
+    log.push(`clima ${race.id}: ok`);
+  }
+} catch (e) {
+  log.push(`clima: error (${e.message})`);
+}
+
+// 6) La carrera de Franco en la F1, año por año (para su ficha). Los años terminados se guardan una vez.
+try {
+  const prev = readJSON('career') || {};
+  const out = { ...prev };
+  for (const y of [...HISTORY_YEARS, 2026]) {
+    if (prev[y] && prev[y].final) continue;
+    const res = (await jget(`${y}/drivers/colapinto/results.json?limit=40`)).RaceTable.Races.map((r) => r.Results[0]);
+    const qual = (await jget(`${y}/drivers/colapinto/qualifying.json?limit=40`)).RaceTable.Races.map((r) => Number(r.QualifyingResults[0].position));
+    const st = (await jget(`${y}/drivers/colapinto/driverstandings.json`)).StandingsTable.StandingsLists[0];
+    const ds = st && st.DriverStandings[0];
+    const pos = res.filter((r) => /^\d+$/.test(r.positionText)).map((r) => Number(r.positionText));
+    out[y] = {
+      team: [...new Set(res.map((r) => r.Constructor.name.replace(/\s+F1 Team$/i, '')))].join(' y '),
+      races: res.length,
+      points: ds ? Number(ds.points) : res.reduce((a, r) => a + Number(r.points), 0),
+      position: ds ? Number(ds.position) : null,
+      best: pos.length ? Math.min(...pos) : null,
+      inPoints: res.filter((r) => Number(r.points) > 0).length,
+      dnf: res.filter((r) => !/^\d+$/.test(r.positionText)).length,
+      bestQuali: qual.length ? Math.min(...qual) : null,
+      final: y < 2026
+    };
+  }
+  if (writeIfChanged('career', out)) changed++;
+  log.push('carrera de Franco: ok');
+} catch (e) {
+  log.push(`carrera de Franco: error (${e.message})`);
+}
+
 console.log(log.join('\n'));
 console.log(`${calls} pedidos a las APIs · ${changed} archivos actualizados`);

@@ -12,6 +12,7 @@
   const JOLPICA = API.jolpica || 'https://api.jolpi.ca/ergast/f1';
   const OPENF1 = API.openf1 || 'https://api.openf1.org/v1';
   const NUM = 43;
+  const MATE_NUM = 10;   // Pierre Gasly, compañero en Alpine (para comparar en cada sesión)
   const CACHE_V = 'r2';   // r1 podía tener carreras guardadas como completas sin estarlo
 
   const dayMs = 86400000;
@@ -217,10 +218,12 @@
       const name = SESSION_ES[s.session_name];
       if (!name || s.is_cancelled) continue;
       if (Date.parse(s.date_end) > Date.now()) { pending++; continue; }
-      let x = null;
+      let x = null, mate = null;
       try { x = (await getJSON(`${OPENF1}/session_result?session_key=${s.session_key}&driver_number=${NUM}`))[0]; } catch (e) { /* todavía no está */ }
       if (!x || (x.position == null && !x.dnf && !x.dns && !x.dsq)) { pending++; continue; }
-      sessions.push({ name, end: s.date_end, pos: x.position, dnf: !!x.dnf, dns: !!x.dns, dsq: !!x.dsq });
+      try { mate = (await getJSON(`${OPENF1}/session_result?session_key=${s.session_key}&driver_number=${MATE_NUM}`))[0]; } catch (e) { /* sin dato del compañero */ }
+      const res = (y) => ({ pos: y.position, dnf: !!y.dnf, dns: !!y.dns, dsq: !!y.dsq });
+      sessions.push({ name, end: s.date_end, ...res(x), ...(mate ? { mate: res(mate) } : {}) });
     }
     return { id: race.id, sessions, complete: pending === 0 && sessions.length > 0 };
   }
