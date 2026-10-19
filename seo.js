@@ -224,6 +224,12 @@
     if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
     return a;
   };
+  // Cronograma en tabla: Google arma con esto la caja de horarios de arriba de los resultados.
+  function scheduleTable(r) {
+    const rows = window.sessionsOf(r).map((s) => `<tr><td>${s.key === 'race' ? `<b>${esc(s.name)}</b>` : esc(s.name)}</td><td>${esc(cap(longDay(s.at)))}</td><td><b>${s.time}</b></td></tr>`).join('');
+    return `<h2>Cronograma del ${esc(r.gp)} (hora argentina)</h2>
+      <div class="i-scroll i-sched"><table class="i-table"><thead><tr><th>Sesión</th><th>Día</th><th>Horario (ARG)</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
   function careerTable(career) {
     if (!career) return '';
     const years = Object.keys(career).sort();
@@ -346,7 +352,7 @@
       intro = `<p>La carrera del <b>${esc(r.gp)}</b> es <b>${esc(when)}</b>. Es la fecha ${r.round} de 23 del Mundial de Fórmula 1 ${year} y se corre en ${esc(where)}.
         ${r.sprint ? 'Es un fin de semana con carrera sprint.' : ''}${quali ? ` La clasificación es el ${longDay(quali.at)} a las ${quali.time}.` : ''}
         Todos los horarios de arriba están en hora argentina (GMT−3), igual que en Uruguay.</p>`;
-      body = intro + chronicle(r, d.weekend, d.season && d.season.mate && d.season.mate.last, t)
+      body = intro + scheduleTable(r) + chronicle(r, d.weekend, d.season && d.season.mate && d.season.mate.last, t)
         + previa(r, d.circuits && d.circuits[r.id], d.weather) + countriesBlock(r);
     } else {
       body = resultBlock(r, d.race) + chronicle(r, d.weekend, d.season && d.season.mate && d.season.mate.last, t);
