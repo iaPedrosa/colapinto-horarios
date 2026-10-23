@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: |
+      - shell: bash {0}
+        run: |
           exec > >(tee out.txt) 2>&1
           B=https://livetiming.formula1.com/static
           curl -sS $B/2026/Index.json -o idx.json; head -c 300 idx.json; echo
@@ -32,6 +33,7 @@ jobs:
           echo "== TimingData 43/10"; curl -sS "$B/${P}TimingData.json" | python3 -c "import json,sys;d=json.loads(sys.stdin.read().lstrip('﻿'));L=d['Lines'];print(list(d.keys()));[print(k,json.dumps({x:L[k].get(x) for x in ('Position','Line','Retired','Stopped','InPit','ShowPosition','BestLapTime','KnockedOut')})) for k in ('43','10')]"
           echo "== tail of stream"; curl -sS "$B/${P}TimingData.jsonStream" | tail -c 600; echo
           echo "== SessionStatus stream"; curl -sS "$B/${P}SessionStatus.jsonStream"
-      - run: |
+      - if: always()
+        run: |
           git config user.name bot; git config user.email bot@x
           git add out.txt; git commit -m out; git push
