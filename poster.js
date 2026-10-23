@@ -29,7 +29,8 @@
   function rowState(r, n, at) {
     if (at == null) return '';
     if (Date.now() >= at + DUR(n)) return ' done';
-    const nx = nextSession(r);
+    // En la imagen para compartir no se marca la próxima/en vivo: quedaría vieja.
+    const nx = state.countdown && nextSession(r);
     if (nx && nx.at === at && nx.name === n) return nx.live ? ' live' : ' next';
     return '';
   }
