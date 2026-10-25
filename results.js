@@ -318,7 +318,12 @@
     const width = (opts && opts.width) || 920;
     const j = data.j, o = data.o;
     const mine = j && j.results.find((x) => isFranco(x.Driver));
-    const pos = posLabel(mine);
+    // Sin el resultado oficial (Jolpica tarda unas horas), se usa lo que OpenF1 ya dio de cada sesión.
+    const wk = !mine && opts && opts.weekend && opts.weekend.sessions || [];
+    const wkOf = (n) => wk.find((x) => x.name === n);
+    const wkLabel = (x) => x.dsq ? 'DSQ' : x.dns ? 'DNS' : x.dnf ? 'DNF' : x.pos != null ? 'P' + x.pos : null;
+    const wkRace = wkOf('Carrera'), wkQualy = wkOf('Clasificación'), wkSprint = wkOf('Carrera Sprint');
+    const pos = mine ? posLabel(mine) : (wkRace && wkLabel(wkRace)) || '—';
     const grid = mine ? (mine.grid === '0' ? 'BOXES' : 'P' + mine.grid) : null;
     const gained = mine && /^\d+$/.test(mine.positionText) && mine.grid !== '0'
       ? Number(mine.grid) - Number(mine.positionText) : null;
@@ -327,7 +332,9 @@
 
     const tiles = [];
     if (j && j.qualy) tiles.push(['CLASIFICACIÓN', 'P' + j.qualy]);
+    else if (wkQualy && wkLabel(wkQualy)) tiles.push(['CLASIFICACIÓN', wkLabel(wkQualy)]);
     if (j && j.sprint) tiles.push(['SPRINT', /^\d+$/.test(j.sprint.pos) ? 'P' + j.sprint.pos : 'DNF']);
+    else if (wkSprint && wkLabel(wkSprint)) tiles.push(['SPRINT', wkLabel(wkSprint)]);
     if (o) {
       tiles.push(['MEJOR VUELTA', fmtLap(o.bestLap)]);
       tiles.push(['VEL. MÁXIMA', o.topSpeed ? Math.round(o.topSpeed) + ' km/h' : '—']);
@@ -350,6 +357,7 @@
           ${grid ? `<div>LARGÓ <b>${grid}</b>${gainTxt ? ` · ${gainTxt}` : ''}</div>` : ''}
           ${pts != null ? `<div class="r-pts">${pts} ${pts === 1 ? 'PUNTO' : 'PUNTOS'}</div>` : ''}
           ${mine && mine.status && !/^\d+$/.test(mine.positionText) ? `<div>${esc(statusEs(mine.status))}</div>` : ''}
+          ${!mine ? `<div>RESULTADO OFICIAL EN CAMINO</div>` : ''}
         </div>
       </div>
       ${tiles.length ? `<div class="r-tiles" style="grid-template-columns:repeat(${tiles.length},minmax(0,1fr));--tile-cols:${tiles.length % 3 === 0 || tiles.length === 5 ? 3 : 2}">

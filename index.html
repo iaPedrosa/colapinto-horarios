@@ -611,8 +611,10 @@ function refreshWeekend(r) {
   }).catch(() => {});
 }
 
+let weekendOf = null;
 function renderResults(r) {
   const my = ++token;
+  weekendOf = null;
   // Si ya lo tenemos (visto antes en esta visita o guardado en el navegador), se dibuja al instante
   // y después se confirma con el archivo; "Cargando" solo aparece si de verdad tarda.
   const quick = info.race[r.id] || window.Results.peek(r);
@@ -620,20 +622,25 @@ function renderResults(r) {
   const draw = (data) => {
     shown = JSON.stringify(data);
     info.race[r.id] = data; renderInfo();
-    paint(P.results(r, data, { width: contentW(), chartH: mode === 'w' ? 230 : 0 }));
+    paint(P.results(r, data, { width: contentW(), chartH: mode === 'w' ? 230 : 0, weekend: data.j ? null : weekendOf }));
   };
   if (quick && window.Results.isComplete(quick)) draw(quick);
   const slow = shown ? 0 : setTimeout(() => {
     if (my === token) paint(P.message(r, 'Cargando<br>resultados…', 'Buscando los datos de la carrera.'));
   }, 400);
-  window.Results.load(r).then((data) => {
+  const wkP = r.days ? window.Results.loadWeekend(r).catch(() => null) : Promise.resolve(null);
+  Promise.all([window.Results.load(r), wkP]).then(([data, wk]) => {
     clearTimeout(slow);
     if (my !== token) return;
-    if (!data) {
+    weekendOf = wk;
+    const raceDone = wk && wk.sessions && wk.sessions.some((x) => x.name === 'Carrera');
+    // Sin resultado oficial ni el de OpenF1, mejor el cartel que una ficha vacía.
+    if (!data || (!data.j && !raceDone)) {
       if (!shown) paint(P.message(r, 'Resultados<br>en camino',
         'Los datos oficiales suelen aparecer unas horas después de la bandera a cuadros. Volvé a entrar más tarde.'));
       return;
     }
+    if (!data) data = { j: null, o: null };
     if (JSON.stringify(data) !== shown) draw(data);
   }).catch(() => {
     clearTimeout(slow);
@@ -786,7 +793,7 @@ function shareHTML() {
     const pressed = (id) => $(id).getAttribute('aria-pressed') === 'true';
     if (pressed('segTab') && info.standings) html = P.standings(info.standings, { twoCols: false });
     else if (pressed('segSea') && info.season) html = P.season(info.season, { width: 640 });
-    else if (pressed('segRes') && info.race[r.id]) html = P.results(r, info.race[r.id], { width: 640 });
+    else if (pressed('segRes') && info.race[r.id]) html = P.results(r, info.race[r.id], { width: 640, weekend: info.race[r.id].j ? null : weekendOf });
     else if (r.days) html = P.schedule(r, tzOpts(r));
     else html = poster.innerHTML;
   } finally { P.state.W = W0; P.state.countdown = cd; }
