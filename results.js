@@ -165,9 +165,57 @@
     };
   }
 
+  // Resultado provisorio armado con OpenF1 mientras Jolpica no publica (tarda unas horas).
+  // Tiene la misma forma que el de Jolpica, con provisional: true, así se dibuja igual.
+  const PTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+  async function openf1Results(race) {
+    const from = new Date(Date.parse(race.raceDay + 'T00:00:00-03:00') - 3 * dayMs).toISOString().slice(0, 10);
+    const to = new Date(Date.parse(race.raceDay + 'T00:00:00-03:00') + 2 * dayMs).toISOString().slice(0, 10);
+    const list = await getJSON(`${OPENF1}/sessions?year=2026&date_start%3E%3D${from}&date_start%3C${to}`);
+    const by = (n) => (list || []).filter((x) => x.session_name === n).pop();
+    const raceS = by('Race');
+    if (!raceS) return null;
+    const k = raceS.session_key;
+    const [res, drv, grid] = await Promise.allSettled([
+      getJSON(`${OPENF1}/session_result?session_key=${k}`),
+      getJSON(`${OPENF1}/drivers?session_key=${k}`),
+      getJSON(`${OPENF1}/starting_grid?session_key=${k}`)
+    ]);
+    const arr = (p) => (p.status === 'fulfilled' && Array.isArray(p.value) ? p.value : []);
+    const R = arr(res);
+    if (!R.length) return null;
+    const names = new Map(arr(drv).map((d) => [d.driver_number, d]));
+    const grids = new Map(arr(grid).map((g) => [g.driver_number, g.position]));
+    const order = (x) => (x.position != null ? x.position : 100 + (x.dsq ? 2 : x.dns ? 1 : 0));
+    const results = R.slice().sort((a, b) => order(a) - order(b) || (b.number_of_laps || 0) - (a.number_of_laps || 0))
+      .map((x) => {
+        const d = names.get(x.driver_number) || {};
+        const out = x.position == null || x.dnf || x.dns || x.dsq;
+        return {
+          positionText: x.dsq ? 'D' : out ? 'R' : String(x.position),
+          points: String(x.points != null ? x.points : (!out && x.position <= 10 ? PTS[x.position - 1] : 0)),
+          grid: grids.has(x.driver_number) ? String(grids.get(x.driver_number)) : null,
+          status: x.dsq ? 'Disqualified' : x.dns ? 'Did not start' : out ? 'Retired' : 'Finished',
+          Driver: { permanentNumber: String(x.driver_number), familyName: d.last_name || d.name_acronym || '#' + x.driver_number }
+        };
+      });
+    const out = { results, raceName: race.gp, provisional: true };
+    const mineIn = async (n) => {
+      const s = by(n);
+      if (!s) return null;
+      try { return (await getJSON(`${OPENF1}/session_result?session_key=${s.session_key}&driver_number=${NUM}`))[0] || null; } catch (e) { return null; }
+    };
+    const [q, spr] = await Promise.all([mineIn('Qualifying'), race.sprint ? mineIn('Sprint') : null]);
+    if (q && q.position != null) out.qualy = String(q.position);
+    if (spr) out.sprint = { pos: spr.position != null && !spr.dnf ? String(spr.position) : 'R', points: String(spr.points || 0) };
+    return out;
+  }
+
   // Datos de un GP directo de las APIs.
   async function fetchRace(race) {
-    const [j, o] = await Promise.allSettled([jolpica(race), openf1(race)]);
+    const [j0, o] = await Promise.allSettled([jolpica(race), openf1(race)]);
+    let j = j0;
+    if (j.status !== 'fulfilled' || !j.value) j = await openf1Results(race).then((value) => ({ status: 'fulfilled', value }), () => ({ status: 'rejected' }));
     const data = {
       j: j.status === 'fulfilled' ? j.value : null,
       o: o.status === 'fulfilled' ? o.value : null
@@ -178,7 +226,7 @@
   }
   function isComplete(d) {
     const o = d && d.o;
-    if (!d || !d.j || !o || o.failed) return false;
+    if (!d || !d.j || d.j.provisional || !o || o.failed) return false;
     // Varios juegos de neumáticos sin paradas, o sin vuelta a vuelta: faltan datos.
     if (o.stints.length > 1 && !o.stops) return false;
     return o.perLap.length >= 2;
@@ -324,8 +372,8 @@
     const wkLabel = (x) => x.dsq ? 'DSQ' : x.dns ? 'DNS' : x.dnf ? 'DNF' : x.pos != null ? 'P' + x.pos : null;
     const wkRace = wkOf('Carrera'), wkQualy = wkOf('Clasificación'), wkSprint = wkOf('Carrera Sprint');
     const pos = mine ? posLabel(mine) : (wkRace && wkLabel(wkRace)) || '—';
-    const grid = mine ? (mine.grid === '0' ? 'BOXES' : 'P' + mine.grid) : null;
-    const gained = mine && /^\d+$/.test(mine.positionText) && mine.grid !== '0'
+    const grid = mine && mine.grid != null ? (mine.grid === '0' ? 'BOXES' : 'P' + mine.grid) : null;
+    const gained = mine && mine.grid != null && /^\d+$/.test(mine.positionText) && mine.grid !== '0'
       ? Number(mine.grid) - Number(mine.positionText) : null;
     const gainTxt = gained == null ? '' : gained > 0 ? `+${gained} PUESTOS` : gained < 0 ? `${gained} PUESTOS` : 'MISMO PUESTO';
     const pts = mine ? Number(mine.points) : null;
@@ -357,7 +405,7 @@
           ${grid ? `<div>LARGÓ <b>${grid}</b>${gainTxt ? ` · ${gainTxt}` : ''}</div>` : ''}
           ${pts != null ? `<div class="r-pts">${pts} ${pts === 1 ? 'PUNTO' : 'PUNTOS'}</div>` : ''}
           ${mine && mine.status && !/^\d+$/.test(mine.positionText) ? `<div>${esc(statusEs(mine.status))}</div>` : ''}
-          ${!mine ? `<div>RESULTADO OFICIAL EN CAMINO</div>` : ''}
+          ${!mine || j.provisional ? `<div>RESULTADO OFICIAL EN CAMINO</div>` : ''}
         </div>
       </div>
       ${tiles.length ? `<div class="r-tiles" style="grid-template-columns:repeat(${tiles.length},minmax(0,1fr));--tile-cols:${tiles.length % 3 === 0 || tiles.length === 5 ? 3 : 2}">
