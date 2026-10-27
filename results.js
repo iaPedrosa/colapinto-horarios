@@ -272,6 +272,8 @@
     for (const s of list) {
       const name = SESSION_ES[s.session_name];
       if (!name || s.is_cancelled) continue;
+      // Sesión en la que Franco cede el auto: no hay resultado suyo que esperar.
+      if (ss.some((x) => x.name === name && x.reemplazo)) continue;
       if (Date.parse(s.date_end) > Date.now()) { pending++; continue; }
       const old = have.get(name + '|' + s.date_end);
       if (old) { sessions.push(old); continue; }
@@ -294,7 +296,7 @@
   // "Ventana caliente": de que termina una sesión hasta 3 h después. OpenF1 gratis publica los datos
   // unos 30 minutos después del final; en ese rato la página consulta seguido y el resto del tiempo no.
   function hotSession(race, t = Date.now()) {
-    return window.sessionsOf(race).some((x) => { const end = x.at + window.sessionDur(x.name); return t >= end && t < end + 3 * 3600000; });
+    return window.sessionsOf(race).some((x) => { if (x.reemplazo) return false; const end = x.at + window.sessionDur(x.name); return t >= end && t < end + 3 * 3600000; });
   }
   async function loadWeekend(race) {
     if (!window.sessionsOf(race).length) return null;

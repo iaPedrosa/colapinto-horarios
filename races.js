@@ -41,7 +41,7 @@ const RACES = [
   { id: 'mexico', round: 19, gp: 'GP de México', track: 'Autódromo Hermanos Rodríguez', dates: '30 OCT — 1 NOV 2026',
     sub: 'Ciudad de México', end: '2026-11-01T19:00:00-03:00',
     days: [
-      { dow: 'VIE', day: '30', s: [['Práctica Libre 1', '15:30'], ['Práctica Libre 2', '19:00']] },
+      { dow: 'VIE', day: '30', s: [['Práctica Libre 1', '15:30', { reemplazo: 'Minì' }], ['Práctica Libre 2', '19:00']] },
       { dow: 'SÁB', day: '31', s: [['Práctica Libre 3', '14:30'], ['Clasificación', '18:00']] }
     ],
     race: { dow: 'DOM', day: '01', time: '17:00', kicker: 'La gran cita' } },
@@ -92,12 +92,13 @@ function sessionAt(r, dayNum, time) {
 }
 // Duración aproximada de cada sesión.
 const sessionDur = (name) => (/^carrera$/i.test(name) ? 2 : 1) * 3600000;
+// Tercer elemento opcional de cada sesión: { reemplazo: 'Nombre' } si Franco cede el auto (por ejemplo, a un piloto de la academia en una práctica).
 // Todas las sesiones de un GP con horario (vacío en las fechas ya disputadas sin horarios).
 function sessionsOf(r) {
   if (!r.days) return [];
   if (!r._sessions) {
     r._sessions = [
-      ...r.days.flatMap((d) => d.s.map(([n, t]) => ({ name: n, time: t, day: d.day, dow: d.dow, at: sessionAt(r, d.day, t), key: n + t + d.day }))),
+      ...r.days.flatMap((d) => d.s.map(([n, t, x]) => ({ name: n, time: t, day: d.day, dow: d.dow, at: sessionAt(r, d.day, t), key: n + t + d.day, ...(x || {}) }))),
       { name: 'Carrera', time: r.race.time, day: r.race.day, dow: r.race.dow, at: sessionAt(r, r.race.day, r.race.time), key: 'race' }
     ];
   }

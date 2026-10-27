@@ -94,7 +94,7 @@
       <div class="day">
         <div class="day-badge"><div class="dow">${d.dow}</div><div class="dnum">${d.day}</div></div>
         <div class="sessions">${d.s.map((x) => `
-          <div class="session${rowState(r, x.name, x.at)}"><div class="s-name">${esc(x.name)}</div><div class="s-right">${sessionRes(r, x.name)}<div class="s-time">${x.time}</div></div></div>`).join('')}
+          <div class="session${rowState(r, x.name, x.at)}"><div class="s-name">${esc(x.name)}${x.reemplazo ? `<div class="s-sub">SIN FRANCO · LA MANEJA ${esc(x.reemplazo.toUpperCase())}</div>` : ''}</div><div class="s-right">${sessionRes(r, x.name)}<div class="s-time">${x.time}</div></div></div>`).join('')}
         </div>
       </div>`).join('');
     return `
